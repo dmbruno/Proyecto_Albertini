@@ -4,33 +4,35 @@ import Button           from '../atoms/Button'
 import Badge            from '../atoms/Badge'
 import Spinner          from '../atoms/Spinner'
 import SearchBar        from '../molecules/SearchBar'
+import ConfirmDialog    from '../molecules/ConfirmDialog'
 import ProductoForm     from '../organisms/ProductoForm'
 import { useProductos } from '../../hooks/useProductos'
 import { useToast }     from '../../context/ToastContext'
 
 const FILTROS = [
-  { id: 'todos',   label: 'Todos'    },
-  { id: 'activo',  label: 'Activos'  },
-  { id: 'inactivo',label: 'Inactivos'},
+  { id: 'todos',    label: 'Todos'    },
+  { id: 'activo',   label: 'Activos'  },
+  { id: 'inactivo', label: 'Inactivos'},
 ]
 
 function normalize(str) {
   return (str ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 }
-
 function fmtPrecio(n) {
   if (n == null) return '—'
   return '$' + Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2 })
 }
 
 export default function Productos() {
-  const { productos, loading, error, crear, actualizar, toggleActivo } = useProductos()
+  const { productos, loading, error, crear, actualizar, toggleActivo, eliminar } = useProductos()
   const { addToast } = useToast()
 
   const [filtro,    setFiltro]    = useState('todos')
   const [query,     setQuery]     = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editing,   setEditing]   = useState(null)
+  const [confirmar, setConfirmar] = useState(null)
+  const [deleting,  setDeleting]  = useState(false)
 
   const filtered = productos.filter(p => {
     const matchFiltro =
@@ -57,21 +59,20 @@ export default function Productos() {
     return result
   }
 
-  const handleEdit = (p) => {
-    setEditing(p)
-    setModalOpen(true)
-  }
-
-  const handleNuevo = () => {
-    setEditing(null)
-    setModalOpen(true)
-  }
-
   const handleToggle = async (p) => {
     const nuevoEstado = !p.activo
     const { error } = await toggleActivo(p.id, nuevoEstado)
     if (error) { addToast('Error: ' + error.message, 'error') }
     else       { addToast(nuevoEstado ? 'Producto activado.' : 'Producto desactivado.') }
+  }
+
+  const handleEliminar = async () => {
+    setDeleting(true)
+    const { error } = await eliminar(confirmar.id)
+    if (error) { addToast(error.message, 'error') }
+    else       { addToast('Producto eliminado.') }
+    setDeleting(false)
+    setConfirmar(null)
   }
 
   return (
@@ -81,7 +82,7 @@ export default function Productos() {
           <h1 className="page-title">Productos</h1>
           <p className="page-subtitle">{productos.filter(p => p.activo).length} activos · {productos.length} total</p>
         </div>
-        <Button onClick={handleNuevo}>+ Nuevo producto</Button>
+        <Button onClick={() => { setEditing(null); setModalOpen(true) }}>+ Nuevo producto</Button>
       </div>
 
       <div className="filter-tabs">
@@ -115,7 +116,7 @@ export default function Productos() {
           <p className="empty-state__desc">
             {query ? 'No hay productos que coincidan con la búsqueda.' : 'No hay productos en este filtro.'}
           </p>
-          {!query && filtro === 'todos' && <Button onClick={handleNuevo}>+ Nuevo producto</Button>}
+          {!query && filtro === 'todos' && <Button onClick={() => { setEditing(null); setModalOpen(true) }}>+ Nuevo producto</Button>}
         </div>
       ) : (
         <div className="list">
@@ -134,7 +135,7 @@ export default function Productos() {
                 </p>
               </div>
               <div className="list-item__actions">
-                <Button variant="secondary" size="sm" onClick={() => handleEdit(p)}>
+                <Button variant="secondary" size="sm" onClick={() => { setEditing(p); setModalOpen(true) }}>
                   Editar
                 </Button>
                 <Button
@@ -146,6 +147,22 @@ export default function Productos() {
                 >
                   {p.activo ? 'Desactivar' : 'Activar'}
                 </Button>
+                {!p.activo && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setConfirmar(p)}
+                    title="Eliminar producto"
+                    style={{ color: 'var(--color-error)' }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                      <path d="M10 11v6"/><path d="M14 11v6"/>
+                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                    </svg>
+                  </Button>
+                )}
               </div>
             </div>
           ))}
@@ -157,6 +174,16 @@ export default function Productos() {
           initial={editing}
           onSave={handleSave}
           onClose={() => { setModalOpen(false); setEditing(null) }}
+        />
+      )}
+
+      {confirmar && (
+        <ConfirmDialog
+          title="Eliminar producto"
+          message={`¿Eliminás "${confirmar.nombre}"? Esta acción no se puede deshacer.`}
+          onConfirm={handleEliminar}
+          onCancel={() => setConfirmar(null)}
+          loading={deleting}
         />
       )}
     </AppLayout>

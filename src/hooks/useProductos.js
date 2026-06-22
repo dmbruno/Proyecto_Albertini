@@ -49,5 +49,28 @@ export function useProductos({ soloActivos = false } = {}) {
     return actualizar(id, { activo })
   }
 
-  return { productos, loading, error, crear, actualizar, toggleActivo, refetch: fetchProductos }
+  const eliminar = async (id) => {
+    // Solo permitir eliminar productos sin pedido_items asociados
+    const { data: items, error: checkError } = await supabase
+      .from('pedido_items')
+      .select('id')
+      .eq('producto_id', id)
+      .limit(1)
+
+    if (checkError) return { error: checkError }
+
+    if (items?.length > 0) {
+      return {
+        error: {
+          message: 'Este producto tiene pedidos registrados y no puede eliminarse. Podés mantenerlo como inactivo.',
+        },
+      }
+    }
+
+    const { error } = await supabase.from('productos').delete().eq('id', id)
+    if (!error) setProductos(prev => prev.filter(p => p.id !== id))
+    return { error }
+  }
+
+  return { productos, loading, error, crear, actualizar, toggleActivo, eliminar, refetch: fetchProductos }
 }

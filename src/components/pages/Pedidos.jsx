@@ -32,6 +32,10 @@ function clientesUnicos(pedido) {
   return nombres
 }
 
+function tieneClientesHuerfanos(pedido) {
+  return (pedido.pedido_items ?? []).some(i => i.cliente_id === null)
+}
+
 export default function Pedidos() {
   const { pedidos, loading, error, eliminar } = usePedidos()
   const { addToast } = useToast()
@@ -103,6 +107,9 @@ export default function Pedidos() {
                   <p className="list-item__title">
                     Pedido del {fmtFecha(pedido.fecha)}
                     &nbsp; <Badge variant={pedido.estado}>{pedido.estado}</Badge>
+                    {tieneClientesHuerfanos(pedido) && (
+                      <span className="badge-huerfano" title="Este pedido tiene clientes eliminados">⚠️ Cliente eliminado</span>
+                    )}
                   </p>
                   <p className="list-item__meta">
                     {clientes.length === 0

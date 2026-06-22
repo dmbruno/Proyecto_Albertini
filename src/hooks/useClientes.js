@@ -47,10 +47,26 @@ export function useClientes() {
   }
 
   const eliminar = async (id) => {
-    const { error } = await supabase.from('clientes').delete().eq('id', id)
-    if (!error) {
-      setClientes(prev => prev.filter(c => c.id !== id))
+    // Bloquear si el cliente tiene items en pedidos borrador
+    const { data: borradores, error: checkError } = await supabase
+      .from('pedido_items')
+      .select('id, pedidos!inner(estado)')
+      .eq('cliente_id', id)
+      .eq('pedidos.estado', 'borrador')
+      .limit(1)
+
+    if (checkError) return { error: checkError }
+
+    if (borradores?.length > 0) {
+      return {
+        error: {
+          message: 'Este cliente tiene pedidos en borrador. Cerrá o eliminá esos pedidos antes de eliminar el cliente.',
+        },
+      }
     }
+
+    const { error } = await supabase.from('clientes').delete().eq('id', id)
+    if (!error) setClientes(prev => prev.filter(c => c.id !== id))
     return { error }
   }
 

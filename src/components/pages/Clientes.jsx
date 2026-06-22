@@ -139,7 +139,7 @@ export default function Clientes() {
       {confirmar && (
         <ConfirmDialog
           title="Eliminar cliente"
-          message={`¿Eliminás a "${confirmar.razon_social}"? Esto eliminará el cliente pero no sus pedidos.`}
+          message={`¿Eliminás a "${confirmar.razon_social}"? Los pedidos existentes se conservan pero quedarán sin nombre de cliente asignado.`}
           onConfirm={handleEliminar}
           onCancel={() => setConfirmar(null)}
           loading={deleting}
