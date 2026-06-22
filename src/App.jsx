@@ -9,6 +9,7 @@ import EditarPedido     from './components/pages/EditarPedido'
 import Clientes         from './components/pages/Clientes'
 import Productos        from './components/pages/Productos'
 import Estadisticas     from './components/pages/Estadisticas'
+import AdminPanel       from './components/pages/AdminPanel'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -59,6 +60,10 @@ export default function App() {
         <Route
           path="/estadisticas"
           element={<PrivateRoute><Estadisticas /></PrivateRoute>}
+        />
+        <Route
+          path="/admin"
+          element={<PrivateRoute><AdminPanel /></PrivateRoute>}
         />
         <Route path="*" element={<Navigate to="/pedidos" replace />} />
       </Routes>

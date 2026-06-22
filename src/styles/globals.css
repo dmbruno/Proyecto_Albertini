@@ -595,6 +595,28 @@ ul, ol { list-style: none; }
   color: #fff;
 }
 
+.header__admin {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: rgb(255 255 255 / 0.8);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.header__admin:hover {
+  background: rgb(255 255 255 / 0.12);
+  color: #fff;
+}
+.header__admin-label {
+  display: none;
+}
+@media (min-width: 768px) {
+  .header__admin-label { display: block; }
+}
+
 /* ============================================================
    ORGANISMS — NAV MENU (sidebar desktop + bottom nav mobile)
    ============================================================ */
@@ -1552,4 +1574,77 @@ ul, ol { list-style: none; }
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   ATOMS — PASSWORD INPUT (wrapper con toggle show/hide)
+   ============================================================ */
+.password-field {
+  position: relative;
+}
+.password-field .input {
+  padding-right: 44px;
+}
+.password-field__toggle {
+  position: absolute;
+  right: var(--space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background var(--transition-fast);
+  flex-shrink: 0;
+}
+.password-field__toggle:hover {
+  color: var(--color-text);
+  background: var(--color-border-light);
+}
+
+/* ============================================================
+   PAGES — ADMIN PANEL
+   ============================================================ */
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--font-bold);
+  font-size: var(--text-base);
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.badge-self {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--space-2);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  vertical-align: middle;
+}
+
+.admin-section-divider {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-muted);
+  padding: var(--space-2) 0 var(--space-1);
+  border-top: var(--border);
+  margin-top: var(--space-1);
+}
+.admin-section-divider span {
+  font-weight: var(--font-normal);
+  color: var(--color-text-subtle);
 }

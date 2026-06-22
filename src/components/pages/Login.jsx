@@ -4,6 +4,7 @@ import { useAuth }        from '../../context/AuthContext'
 import AuthLayout         from '../templates/AuthLayout'
 import Button             from '../atoms/Button'
 import Input              from '../atoms/Input'
+import PasswordInput      from '../atoms/PasswordInput'
 import FormField          from '../molecules/FormField'
 
 export default function Login() {
@@ -67,13 +68,11 @@ export default function Login() {
           </FormField>
 
           <FormField label="Contraseña" htmlFor="password">
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               autoComplete="current-password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••"
               required
             />
           </FormField>
