@@ -1,21 +1,23 @@
-import { useState }       from 'react'
-import { useNavigate }    from 'react-router-dom'
-import AppLayout          from '../templates/AppLayout'
-import Button             from '../atoms/Button'
-import Select             from '../atoms/Select'
-import Spinner            from '../atoms/Spinner'
-import PedidoItemRow      from '../organisms/PedidoItemRow'
-import { useClientes }    from '../../hooks/useClientes'
-import { useProductos }   from '../../hooks/useProductos'
-import { usePedido }      from '../../hooks/usePedido'
-import { useAuth }        from '../../context/AuthContext'
-import { useToast }       from '../../context/ToastContext'
+import { useState }           from 'react'
+import { useNavigate }         from 'react-router-dom'
+import AppLayout               from '../templates/AppLayout'
+import Button                  from '../atoms/Button'
+import Select                  from '../atoms/Select'
+import Spinner                 from '../atoms/Spinner'
+import PedidoItemRow           from '../organisms/PedidoItemRow'
+import { useClientes }         from '../../hooks/useClientes'
+import { useProductos }        from '../../hooks/useProductos'
+import { usePedido }           from '../../hooks/usePedido'
+import { useAuth }             from '../../context/AuthContext'
+import { useToast }            from '../../context/ToastContext'
+import { calcPrecioFinal, calcTotalPiezas } from '../../lib/precios'
+import { useListasPrecios } from '../../hooks/useListasPrecios'
 
 function newItem() {
-  return { tempId: crypto.randomUUID(), producto_id: '', nombre: '', un_pallet: 0, un_caja: 0, pallet: 0, cajas: 0, piezas: 0, precio: 0 }
+  return { tempId: crypto.randomUUID(), producto_id: '', nombre: '', un_pallet: 0, un_caja: 0, pallet: 0, cajas: 0, precio: 0 }
 }
 function newSeccion() {
-  return { tempId: crypto.randomUUID(), clienteId: '', items: [newItem()] }
+  return { tempId: crypto.randomUUID(), clienteId: '', listaId: '', items: [newItem()] }
 }
 
 function fmt(n) {
@@ -23,10 +25,8 @@ function fmt(n) {
 }
 function calcSubtotalSec(sec) {
   return sec.items.reduce((sum, item) => {
-    const tp = (Number(item.pallet) * (Number(item.un_pallet) || 0))
-             + (Number(item.cajas)  * (Number(item.un_caja)   || 0))
-             + Number(item.piezas)
-    return sum + tp * Number(item.precio)
+    const piezas = calcTotalPiezas(item.pallet, item.cajas, item.un_pallet, item.un_caja)
+    return sum + piezas * Number(item.precio)
   }, 0)
 }
 
@@ -38,6 +38,7 @@ export default function NuevoPedido() {
 
   const { clientes,  loading: lcl } = useClientes()
   const { productos, loading: lpd } = useProductos({ soloActivos: true })
+  const { listas } = useListasPrecios()
 
   const [secciones, setSecciones] = useState([newSeccion()])
   const [saving,    setSaving]    = useState(false)
@@ -46,8 +47,25 @@ export default function NuevoPedido() {
   /* ── sección ── */
   const addSeccion    = () => setSecciones(prev => [...prev, newSeccion()])
   const removeSeccion = (secId) => setSecciones(prev => prev.filter(s => s.tempId !== secId))
-  const setClienteId  = (secId, val) =>
-    setSecciones(prev => prev.map(s => s.tempId === secId ? { ...s, clienteId: val } : s))
+  const setClienteId  = (secId, val) => {
+    const cliente = clientes.find(c => c.id === val)
+    const listaId = cliente?.lista_precios_id ?? ''
+    setSecciones(prev => prev.map(s => s.tempId === secId ? { ...s, clienteId: val, listaId } : s))
+  }
+  const setListaId = (secId, listaId) => setSecciones(prev => prev.map(s => {
+    if (s.tempId !== secId) return s
+    const lista = listas.find(l => l.id === listaId) ?? null
+    return {
+      ...s,
+      listaId,
+      items: s.items.map(item => {
+        if (!item.producto_id) return item
+        const prod = productos.find(p => p.id === item.producto_id)
+        if (!prod) return item
+        return { ...item, precio: calcPrecioFinal(prod.precio ?? 0, lista) }
+      }),
+    }
+  }))
 
   /* ── items ── */
   const addItem    = (secId) => setSecciones(prev => prev.map(s =>
@@ -63,7 +81,9 @@ export default function NuevoPedido() {
       items: s.items.map(item => {
         if (item.tempId !== itemId) return item
         if (field === '_select_producto') {
-          return { ...item, producto_id: value.id, nombre: value.nombre, precio: value.precio_final ?? 0, un_pallet: value.un_pallet ?? 0, un_caja: value.un_caja ?? 0 }
+          const lista       = listas.find(l => l.id === s.listaId) ?? null
+          const precioFinal = calcPrecioFinal(value.precio ?? 0, lista)
+          return { ...item, producto_id: value.id, nombre: value.nombre, precio: precioFinal, un_pallet: value.un_pallet ?? 0, un_caja: value.un_caja ?? 0 }
         }
         return { ...item, [field]: value }
       }),
@@ -125,11 +145,31 @@ export default function NuevoPedido() {
             )}
           </div>
 
+          <div className="pedido-seccion__zona">
+            <span className="pedido-seccion__label">Zona</span>
+            <Select
+              value={sec.listaId}
+              onChange={e => setListaId(sec.tempId, e.target.value)}
+              style={{ flex: 1 }}
+            >
+              <option value="">— Seleccionar zona de precios —</option>
+              {listas.map(l => (
+                <option key={l.id} value={l.id}>{l.nombre}</option>
+              ))}
+            </Select>
+            {!sec.listaId && (
+              <span className="pedido-seccion__zona-warn">
+                ⚠ Necesaria para calcular precios
+              </span>
+            )}
+          </div>
+
           <div className="items-table-header">
             <span>Producto</span>
             <span style={{ textAlign: 'center' }}>Pallet</span>
             <span style={{ textAlign: 'center' }}>Cajas</span>
             <span style={{ textAlign: 'center' }}>Piezas</span>
+
             <span>Precio</span>
             <span>Subtotal</span>
             <span></span>

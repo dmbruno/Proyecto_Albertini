@@ -1,10 +1,7 @@
 import * as XLSX from 'xlsx'
 
 function calcSubtotal(item) {
-  const up = item.productos?.un_pallet ?? 0
-  const uc = item.productos?.un_caja   ?? 0
-  const tp = (item.pallet * up) + (item.cajas * uc) + item.piezas
-  return tp * item.precio
+  return item.piezas * item.precio
 }
 
 export function exportarPedidoExcel(pedido, secciones) {
@@ -36,16 +33,13 @@ export function exportarPedidoExcel(pedido, secciones) {
     )
 
     for (const item of items) {
-      const up = item.productos?.un_pallet ?? 0
-      const uc = item.productos?.un_caja   ?? 0
-      const tp = (item.pallet * up) + (item.cajas * uc) + item.piezas
       wsData.push([
         item.productos?.nombre ?? '',
         item.pallet,
         item.cajas,
         item.piezas,
         item.precio,
-        tp * item.precio,
+        item.piezas * item.precio,
       ])
     }
 

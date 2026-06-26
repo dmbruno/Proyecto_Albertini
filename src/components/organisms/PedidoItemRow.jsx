@@ -1,5 +1,6 @@
 import Select from '../atoms/Select'
 import Input  from '../atoms/Input'
+import { calcTotalPiezas } from '../../lib/precios'
 
 function fmt(n) {
   return Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -8,16 +9,21 @@ function fmt(n) {
 export default function PedidoItemRow({ item, productos, onChange, onRemove }) {
   const set = (field, value) => onChange(item.tempId, field, value)
 
-  const up = Number(item.un_pallet) || 0
-  const uc = Number(item.un_caja)   || 0
-  const tp = (Number(item.pallet) * up) + (Number(item.cajas) * uc) + Number(item.piezas)
-  const subtotal = tp * Number(item.precio)
+  const cajasPerPallet = Number(item.un_pallet) || 0
+  const piezasPerCaja  = Number(item.un_caja)   || 0
+  const totalCajas  = (Number(item.pallet) * cajasPerPallet) + Number(item.cajas)
+  const totalPiezas = calcTotalPiezas(item.pallet, item.cajas, item.un_pallet, item.un_caja)
+  const subtotal    = totalPiezas * Number(item.precio)
 
   const handleProductoChange = (e) => {
     const prod = productos.find(p => p.id === e.target.value)
     if (!prod) { onChange(item.tempId, 'producto_id', ''); return }
     onChange(item.tempId, '_select_producto', prod)
   }
+
+  const piezasLabel = totalPiezas > 0
+    ? totalPiezas.toLocaleString('es-AR')
+    : '—'
 
   return (
     <div className="item-row">
@@ -57,20 +63,23 @@ export default function PedidoItemRow({ item, productos, onChange, onRemove }) {
             value={item.cajas}
             onChange={e => set('cajas', e.target.value)}
             className="input-number-compact"
-            aria-label="Cajas"
+            aria-label="Cajas adicionales"
           />
         </div>
         <div>
           <div className="item-row__qty-label">Piezas</div>
-          <Input
-            type="number"
-            min="0"
-            value={item.piezas}
-            onChange={e => set('piezas', e.target.value)}
-            className="input-number-compact"
-            aria-label="Piezas sueltas"
-          />
+          <div className="item-row__piezas-display">{piezasLabel}</div>
         </div>
+
+        {/* Info de desglose — solo mobile */}
+        {item.producto_id && cajasPerPallet > 0 && (
+          <div className="item-row__piezas-info">
+            {Number(item.pallet) > 0
+              ? `${item.pallet} pallet × ${cajasPerPallet} = ${totalCajas} cajas`
+              : `${item.cajas} cajas`}
+            {' '}→ {totalPiezas > 0 ? `${totalPiezas.toLocaleString('es-AR')} piezas` : '0 piezas'}
+          </div>
+        )}
       </div>
 
       {/* Precio + Subtotal */}

@@ -41,9 +41,9 @@ const LINKS = [
     ),
   },
   {
-    to: '/productos',
-    label: 'Productos',
-    shortLabel: 'Productos',
+    to: '/lista-precios',
+    label: 'Lista de Precios',
+    shortLabel: 'Precios',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <line x1="16.5" y1="9.4"  x2="7.5"  y2="4.21"/>

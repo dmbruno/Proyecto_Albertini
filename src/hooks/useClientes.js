@@ -10,7 +10,7 @@ export function useClientes() {
     setLoading(true)
     const { data, error } = await supabase
       .from('clientes')
-      .select('*')
+      .select('*, listas_precios(*)')
       .order('razon_social')
     setClientes(data ?? [])
     setError(error?.message ?? null)
@@ -20,30 +20,29 @@ export function useClientes() {
   useEffect(() => { fetchClientes() }, [fetchClientes])
 
   const crear = async (values) => {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('clientes')
       .insert(values)
-      .select()
-      .single()
-    if (!error) {
-      setClientes(prev =>
-        [...prev, data].sort((a, b) => a.razon_social.localeCompare(b.razon_social))
-      )
-    }
-    return { data, error }
+    if (!error) await fetchClientes()
+    return { error }
   }
 
   const actualizar = async (id, values) => {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('clientes')
       .update(values)
       .eq('id', id)
-      .select()
-      .single()
-    if (!error) {
-      setClientes(prev => prev.map(c => c.id === id ? data : c))
-    }
-    return { data, error }
+    if (!error) await fetchClientes()
+    return { error }
+  }
+
+  const toggleActivo = async (id, nuevoEstado) => {
+    const { error } = await supabase
+      .from('clientes')
+      .update({ activo: nuevoEstado })
+      .eq('id', id)
+    if (!error) await fetchClientes()
+    return { error }
   }
 
   const eliminar = async (id) => {
@@ -70,5 +69,5 @@ export function useClientes() {
     return { error }
   }
 
-  return { clientes, loading, error, crear, actualizar, eliminar, refetch: fetchClientes }
+  return { clientes, loading, error, crear, actualizar, eliminar, toggleActivo, refetch: fetchClientes }
 }

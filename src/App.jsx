@@ -7,7 +7,7 @@ import NuevoPedido      from './components/pages/NuevoPedido'
 import DetallePedido    from './components/pages/DetallePedido'
 import EditarPedido     from './components/pages/EditarPedido'
 import Clientes         from './components/pages/Clientes'
-import Productos        from './components/pages/Productos'
+import ListaPrecios     from './components/pages/ListaPrecios'
 import Estadisticas     from './components/pages/Estadisticas'
 import AdminPanel       from './components/pages/AdminPanel'
 
@@ -54,8 +54,8 @@ export default function App() {
           element={<PrivateRoute><Clientes /></PrivateRoute>}
         />
         <Route
-          path="/productos"
-          element={<PrivateRoute><Productos /></PrivateRoute>}
+          path="/lista-precios"
+          element={<PrivateRoute><ListaPrecios /></PrivateRoute>}
         />
         <Route
           path="/estadisticas"

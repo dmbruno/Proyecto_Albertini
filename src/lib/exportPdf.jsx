@@ -88,6 +88,23 @@ const s = StyleSheet.create({
     letterSpacing: 0.8,
   },
 
+  /* separador de zona */
+  zonaRow: {
+    backgroundColor: '#dbeafe',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    marginTop: 12,
+    marginBottom: 4,
+    borderRadius: 2,
+  },
+  zonaTexto: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 8.5,
+    color: C.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+  },
+
   /* ── bloque por cliente ── */
   seccion: {
     marginBottom: 14,
@@ -144,6 +161,16 @@ const s = StyleSheet.create({
   datoValue: {
     fontSize: 7.5,
     color: C.text,
+  },
+  comentarioBand: {
+    backgroundColor: '#dbeafe',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  comentario: {
+    fontSize: 8,
+    color: '#1e3a5f',
+    fontFamily: 'Helvetica-Oblique',
   },
 
   /* tabla de productos */
@@ -231,6 +258,37 @@ const s = StyleSheet.create({
     color: C.white,
   },
 
+  /* bloque KG */
+  kgBox: {
+    marginTop: 10,
+    backgroundColor: C.primaryLight,
+    borderWidth: 1.5,
+    borderColor: C.primary,
+    borderRadius: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  kgLabel: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 8.5,
+    color: C.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  kgFormula: {
+    fontSize: 7.5,
+    color: C.muted,
+  },
+  kgValue: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 16,
+    color: C.primary,
+  },
+
   /* pie de página */
   pageFooter: {
     position: 'absolute',
@@ -249,6 +307,34 @@ const s = StyleSheet.create({
   },
 })
 
+/* ── orden por zona ── */
+const ZONA_ORDER = [
+  'Jujuy',
+  'Salta sin redespacho',
+  'Salta con redespacho',
+  'San Pedro',
+  'Güemes / Metán',
+]
+
+function agruparConZonas(secciones) {
+  const sorted = [...secciones].sort((a, b) => {
+    const zA = ZONA_ORDER.indexOf(a.cliente?.listas_precios?.nombre ?? '')
+    const zB = ZONA_ORDER.indexOf(b.cliente?.listas_precios?.nombre ?? '')
+    return (zA < 0 ? 999 : zA) - (zB < 0 ? 999 : zB)
+  })
+  const result = []
+  let zonaActual = null
+  for (const sec of sorted) {
+    const zona = sec.cliente?.listas_precios?.nombre ?? null
+    if (zona !== zonaActual) {
+      result.push({ _esZona: true, nombre: zona ?? 'Sin zona asignada' })
+      zonaActual = zona
+    }
+    result.push(sec)
+  }
+  return result
+}
+
 /* ── helpers ── */
 function fmt(n) {
   return '$' + Number(n).toLocaleString('es-AR', {
@@ -257,14 +343,11 @@ function fmt(n) {
   })
 }
 function calcSubtotal(item) {
-  const up = item.productos?.un_pallet ?? 0
-  const uc = item.productos?.un_caja   ?? 0
-  const tp = (item.pallet * up) + (item.cajas * uc) + item.piezas
-  return tp * item.precio
+  return item.piezas * item.precio
 }
 
 /* ── componente PDF ── */
-function PedidoPDF({ pedido, secciones }) {
+function PedidoPDF({ pedido, secciones, totalPiezas, totalKg }) {
   const fecha = pedido.fecha
     ? new Date(pedido.fecha + 'T00:00:00').toLocaleDateString('es-AR', {
         day: '2-digit', month: '2-digit', year: 'numeric',
@@ -290,8 +373,17 @@ function PedidoPDF({ pedido, secciones }) {
           </View>
         </View>
 
-        {/* secciones por cliente */}
-        {secciones.map(({ cliente, items }, idx) => {
+        {/* secciones por cliente, ordenadas por zona */}
+        {agruparConZonas(secciones).map((entry, idx) => {
+          if (entry._esZona) {
+            return (
+              <View key={`zona-${idx}`} style={s.zonaRow}>
+                <Text style={s.zonaTexto}>{entry.nombre}</Text>
+              </View>
+            )
+          }
+
+          const { cliente, items } = entry
           const subtotal = items.reduce((sum, i) => sum + calcSubtotal(i), 0)
           return (
             <View key={idx} style={s.seccion} wrap={false}>
@@ -356,6 +448,13 @@ function PedidoPDF({ pedido, secciones }) {
                 <Text style={s.secSubtotalLabel}>Subtotal {cliente?.razon_social ?? ''}</Text>
                 <Text style={s.secSubtotalValue}>{fmt(subtotal)}</Text>
               </View>
+
+              {/* comentario: cierre visual del bloque */}
+              {cliente?.comentario && (
+                <View style={s.comentarioBand}>
+                  <Text style={s.comentario}>{cliente.comentario}</Text>
+                </View>
+              )}
             </View>
           )
         })}
@@ -365,6 +464,19 @@ function PedidoPDF({ pedido, secciones }) {
           <Text style={s.totalLabel}>Total general</Text>
           <Text style={s.totalValue}>{fmt(totalGeneral)}</Text>
         </View>
+
+        {/* KG */}
+        {totalKg != null && (
+          <View style={s.kgBox}>
+            <View>
+              <Text style={s.kgLabel}>Total KG del pedido</Text>
+              <Text style={s.kgFormula}>
+                {(totalPiezas ?? 0).toLocaleString('es-AR')} piezas × 4 kg/pieza
+              </Text>
+            </View>
+            <Text style={s.kgValue}>{(totalKg ?? 0).toLocaleString('es-AR')} KG</Text>
+          </View>
+        )}
 
         {/* pie de página */}
         <View style={s.pageFooter} fixed>
@@ -379,8 +491,15 @@ function PedidoPDF({ pedido, secciones }) {
   )
 }
 
-export async function exportarPedidoPDF(pedido, secciones) {
-  const blob = await pdf(<PedidoPDF pedido={pedido} secciones={secciones} />).toBlob()
+export async function exportarPedidoPDF(pedido, secciones, { totalPiezas, totalKg } = {}) {
+  const blob = await pdf(
+    <PedidoPDF
+      pedido={pedido}
+      secciones={secciones}
+      totalPiezas={totalPiezas}
+      totalKg={totalKg}
+    />
+  ).toBlob()
   const url  = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href     = url

@@ -1,13 +1,28 @@
 import { useState } from 'react'
-import Button   from '../atoms/Button'
-import Input    from '../atoms/Input'
-import Select   from '../atoms/Select'
+import Button    from '../atoms/Button'
+import Input     from '../atoms/Input'
+import Select    from '../atoms/Select'
 import FormField from '../molecules/FormField'
 
-const EMPTY = { razon_social: '', cuit: '', direccion: '', entrega: '', tipo_comprobante: 'FACTURA' }
+const EMPTY = {
+  razon_social:     '',
+  cuit:             '',
+  direccion:        '',
+  entrega:          '',
+  comentario:       '',
+  tipo_comprobante: 'FACTURA',
+  condicion_iva:    '',
+  lista_precios_id: '',
+}
 
-export default function ClienteForm({ initial, onSave, onClose }) {
-  const [form,    setForm]    = useState({ ...EMPTY, ...initial })
+export default function ClienteForm({ initial, onSave, onClose, listas = [] }) {
+  const [form,    setForm]    = useState({
+    ...EMPTY,
+    ...initial,
+    lista_precios_id: initial?.lista_precios_id ?? '',
+    condicion_iva:    initial?.condicion_iva    ?? '',
+    comentario:       initial?.comentario       ?? '',
+  })
   const [error,   setError]   = useState(null)
   const [loading, setLoading] = useState(false)
 
@@ -18,7 +33,17 @@ export default function ClienteForm({ initial, onSave, onClose }) {
     if (!form.razon_social.trim()) { setError('La razón social es requerida.'); return }
     setLoading(true)
     setError(null)
-    const { error } = await onSave(form)
+    const payload = {
+      razon_social:     form.razon_social.trim(),
+      cuit:             form.cuit             || null,
+      direccion:        form.direccion        || null,
+      entrega:          form.entrega          || null,
+      comentario:       form.comentario       || null,
+      tipo_comprobante: form.tipo_comprobante || null,
+      condicion_iva:    form.condicion_iva    || null,
+      lista_precios_id: form.lista_precios_id || null,
+    }
+    const { error } = await onSave(payload)
     if (error) { setError(error.message); setLoading(false) }
   }
 
@@ -75,6 +100,18 @@ export default function ClienteForm({ initial, onSave, onClose }) {
             />
           </FormField>
 
+          <FormField label="Comentarios / Horario de entrega" htmlFor="comentario">
+            <textarea
+              id="comentario"
+              className="input"
+              rows={2}
+              value={form.comentario}
+              onChange={e => set('comentario', e.target.value)}
+              placeholder="Ej: Entrega martes y jueves 8-12hs · Avisar al llegar"
+              style={{ resize: 'vertical', minHeight: 60, fontFamily: 'inherit', fontSize: 'var(--text-sm)' }}
+            />
+          </FormField>
+
           <FormField label="Tipo de comprobante" htmlFor="tipo_comprobante">
             <Select
               id="tipo_comprobante"
@@ -83,6 +120,33 @@ export default function ClienteForm({ initial, onSave, onClose }) {
             >
               <option value="FACTURA">FACTURA</option>
               <option value="REMITO">REMITO</option>
+            </Select>
+          </FormField>
+
+          <FormField label="Condición frente al IVA" htmlFor="condicion_iva">
+            <Select
+              id="condicion_iva"
+              value={form.condicion_iva}
+              onChange={e => set('condicion_iva', e.target.value)}
+            >
+              <option value="">— Sin especificar —</option>
+              <option value="RESPONSABLE INSCRIPTO">Responsable Inscripto</option>
+              <option value="MONOTRIBUTISTA">Monotributista</option>
+              <option value="EXENTO">Exento</option>
+              <option value="CONSUMIDOR FINAL">Consumidor Final</option>
+            </Select>
+          </FormField>
+
+          <FormField label="Lista de precios (zona)" htmlFor="lista_precios_id">
+            <Select
+              id="lista_precios_id"
+              value={form.lista_precios_id}
+              onChange={e => set('lista_precios_id', e.target.value)}
+            >
+              <option value="">— Sin asignar —</option>
+              {listas.map(l => (
+                <option key={l.id} value={l.id}>{l.nombre}</option>
+              ))}
             </Select>
           </FormField>
 

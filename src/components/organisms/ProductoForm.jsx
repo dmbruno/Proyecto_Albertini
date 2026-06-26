@@ -2,15 +2,48 @@ import { useState } from 'react'
 import Button    from '../atoms/Button'
 import Input     from '../atoms/Input'
 import FormField from '../molecules/FormField'
+import { calcComision, calcPrecioFinal, calcSinIva } from '../../lib/precios'
 
-const EMPTY = { nombre: '', precio_final: '', precio_sin_iva: '', un_pallet: '', un_caja: '', activo: true }
+const EMPTY = { nombre: '', precio: '', un_pallet: '', un_caja: '', activo: true }
 
-export default function ProductoForm({ initial, onSave, onClose }) {
+function fmtNum(n) {
+  if (n == null || isNaN(n)) return '—'
+  return Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function ReadOnlyField({ label, value, highlight }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', fontWeight: 'var(--font-medium)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        {label}
+      </span>
+      <span style={{
+        fontSize: highlight ? 'var(--text-base)' : 'var(--text-sm)',
+        fontWeight: highlight ? 'var(--font-bold)' : 'var(--font-medium)',
+        color: highlight ? 'var(--color-primary)' : 'var(--color-text)',
+        padding: 'var(--space-2) var(--space-3)',
+        background: highlight ? 'var(--color-primary-bg)' : 'var(--color-surface)',
+        borderRadius: 'var(--radius-sm)',
+        border: '1px solid var(--color-border)',
+      }}>
+        ${fmtNum(value)}
+      </span>
+    </div>
+  )
+}
+
+export default function ProductoForm({ initial, onSave, onClose, lista }) {
   const [form,    setForm]    = useState({ ...EMPTY, ...initial })
   const [error,   setError]   = useState(null)
   const [loading, setLoading] = useState(false)
 
   const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
+
+  const precioBase  = Number(form.precio) || 0
+  const comision    = calcComision(precioBase, lista)
+  const precioFinal = calcPrecioFinal(precioBase, lista)
+  const sinIva      = calcSinIva(precioFinal)
+  const conImpuesto = lista && (lista.impuesto_municipal ?? 0) > 0
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -18,12 +51,11 @@ export default function ProductoForm({ initial, onSave, onClose }) {
     setLoading(true)
     setError(null)
     const payload = {
-      nombre:        form.nombre.trim(),
-      precio_final:  form.precio_final  === '' ? null : Number(form.precio_final),
-      precio_sin_iva:form.precio_sin_iva === '' ? null : Number(form.precio_sin_iva),
-      un_pallet:     form.un_pallet      === '' ? null : Number(form.un_pallet),
-      un_caja:       form.un_caja        === '' ? null : Number(form.un_caja),
-      activo:        form.activo,
+      nombre:    form.nombre.trim(),
+      precio:    form.precio    === '' ? null : Number(form.precio),
+      un_pallet: form.un_pallet === '' ? null : Number(form.un_pallet),
+      un_caja:   form.un_caja   === '' ? null : Number(form.un_caja),
+      activo:    form.activo,
     }
     const { error } = await onSave(payload)
     if (error) { setError(error.message); setLoading(false) }
@@ -50,39 +82,56 @@ export default function ProductoForm({ initial, onSave, onClose }) {
               id="nombre"
               value={form.nombre}
               onChange={e => set('nombre', e.target.value)}
-              placeholder="Ej: Agua mineral 500ml x24"
+              placeholder="Ej: Cremoso LC"
               required
             />
           </FormField>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-            <FormField label="Precio final ($)" htmlFor="precio_final">
-              <Input
-                id="precio_final"
-                type="number"
-                step="0.01"
-                min="0"
-                value={form.precio_final}
-                onChange={e => set('precio_final', e.target.value)}
-                placeholder="0.00"
-              />
-            </FormField>
+          <FormField label="Precio base ($)" htmlFor="precio">
+            <Input
+              id="precio"
+              type="number"
+              step="0.01"
+              min="0"
+              value={form.precio}
+              onChange={e => set('precio', e.target.value)}
+              placeholder="0.00"
+            />
+          </FormField>
 
-            <FormField label="Precio sin IVA ($)" htmlFor="precio_sin_iva">
-              <Input
-                id="precio_sin_iva"
-                type="number"
-                step="0.01"
-                min="0"
-                value={form.precio_sin_iva}
-                onChange={e => set('precio_sin_iva', e.target.value)}
-                placeholder="0.00"
-              />
-            </FormField>
-          </div>
+          {lista && (
+            <div style={{
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-md)',
+              padding: 'var(--space-4)',
+              background: 'var(--color-surface)',
+            }}>
+              <p style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--color-text-secondary)',
+                fontWeight: 'var(--font-semibold)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: 'var(--space-3)',
+              }}>
+                Cálculo — {lista.nombre}
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-3)' }}>
+                <ReadOnlyField label={`Comisión (${lista.comision_pct ?? 3}%)`} value={comision} />
+                <ReadOnlyField label="Gtos. flete" value={lista.gtos_flete} />
+                {conImpuesto && <ReadOnlyField label="Imp. municipal" value={lista.impuesto_municipal} />}
+                <ReadOnlyField label="Sin IVA (21%)" value={sinIva} />
+              </div>
+
+              <div style={{ marginTop: 'var(--space-3)' }}>
+                <ReadOnlyField label="Precio final" value={precioFinal} highlight />
+              </div>
+            </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-            <FormField label="Unidades por pallet" htmlFor="un_pallet">
+            <FormField label="Cajas por pallet" htmlFor="un_pallet">
               <Input
                 id="un_pallet"
                 type="number"

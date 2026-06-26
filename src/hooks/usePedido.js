@@ -19,7 +19,7 @@ export function usePedido() {
           producto_id: i.producto_id,
           pallet:      Number(i.pallet) || 0,
           cajas:       Number(i.cajas)  || 0,
-          piezas:      Number(i.piezas) || 0,
+          piezas:      ((Number(i.pallet) * (Number(i.un_pallet) || 0)) + Number(i.cajas)) * (Number(i.un_caja) || 0),
           precio:      Number(i.precio) || 0,
         }))
     )
@@ -45,7 +45,7 @@ export function usePedido() {
       supabase.from('pedidos').select('*').eq('id', pedidoId).single(),
       supabase
         .from('pedido_items')
-        .select('*, clientes(razon_social, cuit, direccion, entrega, tipo_comprobante), productos(nombre, un_pallet, un_caja)')
+        .select('*, clientes(razon_social, cuit, direccion, entrega, tipo_comprobante, lista_precios_id, comentario, listas_precios(id, nombre)), productos(nombre, un_pallet, un_caja)')
         .eq('pedido_id', pedidoId)
         .order('cliente_id'),
     ])
@@ -76,7 +76,7 @@ export function usePedido() {
           producto_id: i.producto_id,
           pallet:      Number(i.pallet) || 0,
           cajas:       Number(i.cajas)  || 0,
-          piezas:      Number(i.piezas) || 0,
+          piezas:      ((Number(i.pallet) * (Number(i.un_pallet) || 0)) + Number(i.cajas)) * (Number(i.un_caja) || 0),
           precio:      Number(i.precio) || 0,
         }))
     )
