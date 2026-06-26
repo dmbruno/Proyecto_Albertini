@@ -1949,6 +1949,18 @@ ul, ol { list-style: none; }
 }
 
 /* ============================================================
+   MOBILE — prevenir zoom automático de iOS en inputs (font-size < 16px)
+   ============================================================ */
+@media (max-width: 767px) {
+  .input,
+  .select,
+  textarea.input,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* ============================================================
    RESPONSIVE — EXTRA SMALL (<= 479px)
    ============================================================ */
 @media (max-width: 479px) {
