@@ -207,7 +207,7 @@ export default function NuevoPedido() {
 
       <div className="pedido-actions">
         <Button variant="secondary" size="lg" loading={saving} onClick={() => handleGuardar('borrador')}>
-          💾 Guardar borrador
+          💾 Guardar pedido
         </Button>
         <Button variant="primary" size="lg" loading={saving} onClick={() => handleGuardar('enviado')}>
           ✓ Marcar como enviado

@@ -68,7 +68,7 @@ export default function PedidoItemRow({ item, productos, onChange, onRemove }) {
         </div>
         <div>
           <div className="item-row__qty-label">Piezas</div>
-          <div className="item-row__piezas-display">{piezasLabel}</div>
+          <div className="input input-number-compact item-row__piezas-display">{piezasLabel}</div>
         </div>
 
         {/* Info de desglose — solo mobile */}

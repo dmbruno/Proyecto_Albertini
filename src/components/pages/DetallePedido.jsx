@@ -125,7 +125,7 @@ export default function DetallePedido() {
             &nbsp;·&nbsp; {items.length} líneas
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+        <div className="detalle-acciones">
           <Button variant="secondary" size="sm" loading={exporting} onClick={handleExportPDF}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -145,7 +145,7 @@ export default function DetallePedido() {
           </Button>
           {pedido.estado === 'borrador' && (
             <>
-              <Link to={`/pedidos/${id}/editar`}>
+              <Link to={`/pedidos/${id}/editar`} style={{ display: 'contents' }}>
                 <Button variant="secondary" size="sm">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>

@@ -142,7 +142,7 @@ export default function ProductoForm({ initial, onSave, onClose, lista }) {
               />
             </FormField>
 
-            <FormField label="Unidades por caja" htmlFor="un_caja">
+            <FormField label="Piezas por caja" htmlFor="un_caja">
               <Input
                 id="un_caja"
                 type="number"
