@@ -19,7 +19,10 @@ function restarDias(n) {
   return d.toISOString().slice(0, 10)
 }
 function fmt(n) {
-  return '$' + Number(n).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+  return Number(n).toLocaleString('es-AR', { maximumFractionDigits: 0 }) + ' kg'
+}
+function fmtEje(v) {
+  return v >= 1_000_000 ? (v / 1_000_000).toFixed(1) + 'M' : v >= 1_000 ? (v / 1_000).toFixed(1) + 'k' : v
 }
 function fmtFecha(str) {
   if (!str) return ''
@@ -37,12 +40,16 @@ const PRESETS = [
   { id: 'custom', label: 'Personalizado', desde: null },
 ]
 
-/* ── tooltip personalizado para el area chart ── */
-function TooltipPedido({ active, payload, label }) {
+/* ── tooltip personalizado para el area chart ──
+   Usa payload[0].payload (la fila completa del punto hovereado) en vez de
+   `label`, porque el eje X se indexa por posición (dataKey="idx") — si
+   varios pedidos caen el mismo día, formatear la fecha como dataKey los
+   duplicaría y Recharts confundiría el punto activo al hacer hover. */
+function TooltipPedido({ active, payload }) {
   if (!active || !payload?.length) return null
   return (
     <div className="stats-tooltip">
-      <p className="stats-tooltip__fecha">{fmtFecha(label)}</p>
+      <p className="stats-tooltip__fecha">{fmtFecha(payload[0].payload.fecha)}</p>
       <p className="stats-tooltip__valor">{fmt(payload[0].value)}</p>
     </div>
   )
@@ -65,7 +72,7 @@ export default function Estadisticas() {
   const {
     loading, error,
     ventasPorPedido, topProductos, topClientes,
-    totalFacturado, cantidadPedidos, mejorProducto, mejorCliente,
+    totalKg, cantidadPedidos, mejorProducto, mejorCliente,
     fetchEstadisticas,
   } = useEstadisticas()
 
@@ -144,8 +151,8 @@ export default function Estadisticas() {
           {/* ── KPIs ── */}
           <div className="stats-kpis">
             <div className="stats-kpi">
-              <p className="stats-kpi__label">Total facturado</p>
-              <p className="stats-kpi__value">{fmt(totalFacturado)}</p>
+              <p className="stats-kpi__label">Kg totales vendidos</p>
+              <p className="stats-kpi__value">{fmt(totalKg)}</p>
             </div>
             <div className="stats-kpi">
               <p className="stats-kpi__label">Pedidos</p>
@@ -171,12 +178,12 @@ export default function Estadisticas() {
             <>
               {/* ── Gráfico 1: ventas por pedido ── */}
               <div className="stats-card">
-                <p className="stats-card__title">Ventas por pedido</p>
-                <p className="stats-card__sub">Total facturado en cada pedido del período</p>
+                <p className="stats-card__title">Kg por pedido</p>
+                <p className="stats-card__sub">Kg estimados en cada pedido del período</p>
                 <div className="stats-chart-wrap">
                   <ResponsiveContainer width="100%" height={220}>
                     <AreaChart
-                      data={ventasPorPedido.map(p => ({ ...p, fecha: fmtFecha(p.fecha) }))}
+                      data={ventasPorPedido.map((p, idx) => ({ ...p, idx }))}
                       margin={{ top: 8, right: 12, left: 8, bottom: 0 }}
                     >
                       <defs>
@@ -187,18 +194,19 @@ export default function Estadisticas() {
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                       <XAxis
-                        dataKey="fecha"
+                        dataKey="idx"
+                        tickFormatter={idx => fmtFecha(ventasPorPedido[idx]?.fecha)}
                         tick={{ fontSize: 11, fill: '#64748b' }}
                         tickLine={false}
                         axisLine={false}
                         interval="preserveStartEnd"
                       />
                       <YAxis
-                        tickFormatter={v => '$' + (v >= 1_000_000 ? (v / 1_000_000).toFixed(1) + 'M' : v >= 1_000 ? (v / 1_000).toFixed(0) + 'k' : v)}
+                        tickFormatter={fmtEje}
                         tick={{ fontSize: 11, fill: '#64748b' }}
                         tickLine={false}
                         axisLine={false}
-                        width={52}
+                        width={44}
                       />
                       <Tooltip content={<TooltipPedido />} />
                       <Area
@@ -221,21 +229,22 @@ export default function Estadisticas() {
                 {/* Top productos */}
                 <div className="stats-card">
                   <p className="stats-card__title">Productos más vendidos</p>
-                  <p className="stats-card__sub">Por monto total acumulado</p>
+                  <p className="stats-card__sub">Por Kg estimados acumulados</p>
                   <div className="stats-chart-wrap">
                     <ResponsiveContainer width="100%" height={barHeightProductos}>
                       <BarChart
                         data={topProductos.map(p => ({ ...p, nombre: truncar(p.nombre, 20) }))}
                         layout="vertical"
-                        margin={{ top: 0, right: 16, left: 4, bottom: 0 }}
+                        margin={{ top: 0, right: 16, left: 4, bottom: 16 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
                         <XAxis
                           type="number"
-                          tickFormatter={v => v >= 1_000_000 ? (v / 1_000_000).toFixed(1) + 'M' : v >= 1_000 ? (v / 1_000).toFixed(0) + 'k' : v}
+                          tickFormatter={fmtEje}
                           tick={{ fontSize: 10, fill: '#64748b' }}
                           tickLine={false}
                           axisLine={false}
+                          label={{ value: 'Kg', position: 'insideBottomRight', offset: -4, fontSize: 10, fill: '#64748b' }}
                         />
                         <YAxis
                           type="category"
@@ -260,21 +269,22 @@ export default function Estadisticas() {
                 {/* Top clientes */}
                 <div className="stats-card">
                   <p className="stats-card__title">Clientes que más compran</p>
-                  <p className="stats-card__sub">Por monto total acumulado</p>
+                  <p className="stats-card__sub">Por Kg estimados acumulados</p>
                   <div className="stats-chart-wrap">
                     <ResponsiveContainer width="100%" height={barHeightClientes}>
                       <BarChart
                         data={topClientes.map(c => ({ ...c, nombre: truncar(c.nombre, 20) }))}
                         layout="vertical"
-                        margin={{ top: 0, right: 16, left: 4, bottom: 0 }}
+                        margin={{ top: 0, right: 16, left: 4, bottom: 16 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
                         <XAxis
                           type="number"
-                          tickFormatter={v => v >= 1_000_000 ? (v / 1_000_000).toFixed(1) + 'M' : v >= 1_000 ? (v / 1_000).toFixed(0) + 'k' : v}
+                          tickFormatter={fmtEje}
                           tick={{ fontSize: 10, fill: '#64748b' }}
                           tickLine={false}
                           axisLine={false}
+                          label={{ value: 'Kg', position: 'insideBottomRight', offset: -4, fontSize: 10, fill: '#64748b' }}
                         />
                         <YAxis
                           type="category"

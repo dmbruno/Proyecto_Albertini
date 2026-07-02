@@ -1,12 +1,6 @@
 import { useState, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
-
-function calcSubtotal(item) {
-  const up = item.productos?.un_pallet ?? 0
-  const uc = item.productos?.un_caja   ?? 0
-  const tp = (item.pallet * up) + (item.cajas * uc) + item.piezas
-  return tp * item.precio
-}
+import { calcKgEstimado } from '../lib/precios'
 
 export function useEstadisticas() {
   const [pedidos,  setPedidos]  = useState([])
@@ -21,9 +15,9 @@ export function useEstadisticas() {
       .select(`
         id, fecha, estado,
         pedido_items(
-          pallet, cajas, piezas, precio,
+          piezas,
           clientes(razon_social),
-          productos(nombre, un_pallet, un_caja)
+          productos(nombre)
         )
       `)
       .gte('fecha', desde)
@@ -35,10 +29,10 @@ export function useEstadisticas() {
     setLoading(false)
   }, [])
 
-  /* ── agregaciones ── */
+  /* ── agregaciones (todo en Kg estimados, no en importe) ── */
   const ventasPorPedido = pedidos.map(p => {
-    const total = (p.pedido_items ?? []).reduce((s, i) => s + calcSubtotal(i), 0)
-    return { fecha: p.fecha, total, estado: p.estado }
+    const totalKg = (p.pedido_items ?? []).reduce((s, i) => s + calcKgEstimado(i.piezas), 0)
+    return { fecha: p.fecha, total: totalKg, estado: p.estado }
   })
 
   const topProductos = (() => {
@@ -46,7 +40,7 @@ export function useEstadisticas() {
     pedidos.forEach(p =>
       (p.pedido_items ?? []).forEach(item => {
         const key = item.productos?.nombre ?? 'Sin nombre'
-        map[key] = (map[key] ?? 0) + calcSubtotal(item)
+        map[key] = (map[key] ?? 0) + calcKgEstimado(item.piezas)
       })
     )
     return Object.entries(map)
@@ -60,7 +54,7 @@ export function useEstadisticas() {
     pedidos.forEach(p =>
       (p.pedido_items ?? []).forEach(item => {
         const key = item.clientes?.razon_social ?? 'Sin nombre'
-        map[key] = (map[key] ?? 0) + calcSubtotal(item)
+        map[key] = (map[key] ?? 0) + calcKgEstimado(item.piezas)
       })
     )
     return Object.entries(map)
@@ -69,7 +63,7 @@ export function useEstadisticas() {
       .slice(0, 8)
   })()
 
-  const totalFacturado   = ventasPorPedido.reduce((s, p) => s + p.total, 0)
+  const totalKg          = ventasPorPedido.reduce((s, p) => s + p.total, 0)
   const cantidadPedidos  = pedidos.length
   const mejorProducto    = topProductos[0]?.nombre  ?? '—'
   const mejorCliente     = topClientes[0]?.nombre   ?? '—'
@@ -77,7 +71,7 @@ export function useEstadisticas() {
   return {
     loading, error,
     ventasPorPedido, topProductos, topClientes,
-    totalFacturado, cantidadPedidos, mejorProducto, mejorCliente,
+    totalKg, cantidadPedidos, mejorProducto, mejorCliente,
     fetchEstadisticas,
   }
 }

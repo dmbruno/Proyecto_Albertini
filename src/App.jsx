@@ -10,6 +10,10 @@ import Clientes         from './components/pages/Clientes'
 import ListaPrecios     from './components/pages/ListaPrecios'
 import Estadisticas     from './components/pages/Estadisticas'
 import AdminPanel       from './components/pages/AdminPanel'
+import CuentaCorriente from './components/pages/CuentaCorriente'
+import DetalleCuenta   from './components/pages/DetalleCuenta'
+import Cheques         from './components/pages/Cheques'
+import Movimientos     from './components/pages/Movimientos'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -56,6 +60,22 @@ export default function App() {
         <Route
           path="/lista-precios"
           element={<PrivateRoute><ListaPrecios /></PrivateRoute>}
+        />
+        <Route
+          path="/cuentas"
+          element={<PrivateRoute><CuentaCorriente /></PrivateRoute>}
+        />
+        <Route
+          path="/cuentas/cheques"
+          element={<PrivateRoute><Cheques /></PrivateRoute>}
+        />
+        <Route
+          path="/cuentas/movimientos"
+          element={<PrivateRoute><Movimientos /></PrivateRoute>}
+        />
+        <Route
+          path="/cuentas/:clienteId"
+          element={<PrivateRoute><DetalleCuenta /></PrivateRoute>}
         />
         <Route
           path="/estadisticas"

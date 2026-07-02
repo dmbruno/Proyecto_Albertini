@@ -14,6 +14,11 @@ const FILTROS = [
   { id: 'enviado',  label: 'Enviado'   },
 ]
 
+const LABEL_ESTADO = {
+  borrador: 'Borrador',
+  enviado:  'Enviado',
+}
+
 function fmtFecha(str) {
   if (!str) return ''
   return new Date(str + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -102,42 +107,52 @@ export default function Pedidos() {
           {lista.map(pedido => {
             const clientes = clientesUnicos(pedido)
             return (
-              <div key={pedido.id} className="list-item">
-                <div className="list-item__body">
-                  <p className="list-item__title">
-                    Pedido del {fmtFecha(pedido.fecha)}
-                    &nbsp; <Badge variant={pedido.estado}>{pedido.estado}</Badge>
-                    {tieneClientesHuerfanos(pedido) && (
-                      <span className="badge-huerfano" title="Este pedido tiene clientes eliminados">⚠️ Cliente eliminado</span>
-                    )}
-                  </p>
-                  <p className="list-item__meta">
-                    {clientes.length === 0
-                      ? 'Sin clientes'
-                      : clientes.length === 1
-                        ? clientes[0]
-                        : `${clientes[0]} y ${clientes.length - 1} más`}
-                    {' · '}{(pedido.pedido_items ?? []).length} líneas
-                  </p>
+              <div key={pedido.id} className="list-item pedido-item">
+                <div className="pedido-item__badges--mobile">
+                  <Badge variant={pedido.estado}>{LABEL_ESTADO[pedido.estado] ?? pedido.estado}</Badge>
+                  {tieneClientesHuerfanos(pedido) && (
+                    <span className="badge-huerfano" title="Este pedido tiene clientes eliminados">⚠️ Cliente eliminado</span>
+                  )}
                 </div>
-                <div className="list-item__actions">
-                  <Link to={`/pedidos/${pedido.id}`}>
-                    <Button variant="secondary" size="sm">Ver</Button>
-                  </Link>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setConfirmar(pedido)}
-                    title="Eliminar pedido"
-                    style={{ color: 'var(--color-error)' }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <polyline points="3 6 5 6 21 6"/>
-                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                      <path d="M10 11v6"/><path d="M14 11v6"/>
-                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                    </svg>
-                  </Button>
+                <div className="pedido-item__row">
+                  <div className="list-item__body">
+                    <p className="list-item__title" style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'visible', whiteSpace: 'normal' }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>Pedido del {fmtFecha(pedido.fecha)}</span>
+                      <span className="pedido-item__badges--desktop">
+                        <Badge variant={pedido.estado}>{LABEL_ESTADO[pedido.estado] ?? pedido.estado}</Badge>
+                        {tieneClientesHuerfanos(pedido) && (
+                          <span className="badge-huerfano" title="Este pedido tiene clientes eliminados">⚠️ Cliente eliminado</span>
+                        )}
+                      </span>
+                    </p>
+                    <p className="list-item__meta">
+                      {clientes.length === 0
+                        ? 'Sin clientes'
+                        : clientes.length === 1
+                          ? clientes[0]
+                          : `${clientes[0]} y ${clientes.length - 1} más`}
+                      {' · '}{(pedido.pedido_items ?? []).length} líneas
+                    </p>
+                  </div>
+                  <div className="list-item__actions pedido-item__actions">
+                    <Link to={`/pedidos/${pedido.id}`}>
+                      <Button variant="secondary" size="sm">Ver</Button>
+                    </Link>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setConfirmar(pedido)}
+                      title="Eliminar pedido"
+                      style={{ color: 'var(--color-error)' }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                        <path d="M10 11v6"/><path d="M14 11v6"/>
+                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                      </svg>
+                    </Button>
+                  </div>
                 </div>
               </div>
             )

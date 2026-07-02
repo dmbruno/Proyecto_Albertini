@@ -5,24 +5,22 @@ import Button                      from '../atoms/Button'
 import Select                      from '../atoms/Select'
 import Spinner                     from '../atoms/Spinner'
 import PedidoItemRow               from '../organisms/PedidoItemRow'
+import ConfirmDialog               from '../molecules/ConfirmDialog'
 import { useClientes }             from '../../hooks/useClientes'
 import { useProductos }            from '../../hooks/useProductos'
 import { usePedido }               from '../../hooks/usePedido'
 import { useToast }                from '../../context/ToastContext'
-import { calcPrecioFinal, calcTotalPiezas } from '../../lib/precios'
+import { calcPrecioFinal, calcTotalPiezas, calcKgEstimado } from '../../lib/precios'
 import { useListasPrecios } from '../../hooks/useListasPrecios'
 
 function newItem() {
   return { tempId: crypto.randomUUID(), producto_id: '', nombre: '', un_pallet: 0, un_caja: 0, pallet: 0, cajas: 0, precio: 0 }
 }
 
-function fmt(n) {
-  return Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-function calcSubtotalSec(sec) {
+function calcKgSec(sec) {
   return sec.items.reduce((sum, item) => {
     const piezas = calcTotalPiezas(item.pallet, item.cajas, item.un_pallet, item.un_caja)
-    return sum + piezas * Number(item.precio)
+    return sum + calcKgEstimado(piezas)
   }, 0)
 }
 
@@ -32,14 +30,16 @@ export default function EditarPedido() {
   const { cargar, actualizar } = usePedido()
   const { addToast } = useToast()
 
-  const { clientes,  loading: lcl } = useClientes()
+  const { clientes,  loading: lcl, actualizar: actualizarCliente } = useClientes()
   const { productos, loading: lpd } = useProductos({ soloActivos: true })
   const { listas } = useListasPrecios()
 
-  const [secciones,   setSecciones]   = useState([])
-  const [loadingData, setLoadingData] = useState(true)
-  const [saving,      setSaving]      = useState(false)
-  const [error,       setError]       = useState(null)
+  const [secciones,     setSecciones]     = useState([])
+  const [loadingData,   setLoadingData]   = useState(true)
+  const [saving,        setSaving]        = useState(false)
+  const [error,         setError]         = useState(null)
+  const [confirmarZona, setConfirmarZona] = useState(null)
+  const [corrigiendoZona, setCorrigiendoZona] = useState(false)
 
   useEffect(() => {
     cargar(id).then(({ pedido, items, error }) => {
@@ -122,7 +122,17 @@ export default function EditarPedido() {
     }
   }))
 
-  const total = secciones.reduce((sum, s) => sum + calcSubtotalSec(s), 0)
+  const totalKg = secciones.reduce((sum, s) => sum + calcKgSec(s), 0)
+
+  const handleCorregirZona = async () => {
+    if (!confirmarZona) return
+    setCorrigiendoZona(true)
+    const { error } = await actualizarCliente(confirmarZona.clienteId, { lista_precios_id: confirmarZona.listaId })
+    setCorrigiendoZona(false)
+    setConfirmarZona(null)
+    if (error) { addToast(error.message, 'error'); return }
+    addToast('Zona del cliente actualizada correctamente.')
+  }
 
   const handleGuardar = async (estado) => {
     const sinCliente = secciones.some(s => !s.clienteId)
@@ -194,6 +204,20 @@ export default function EditarPedido() {
                 ⚠ Necesaria para calcular precios
               </span>
             )}
+            {sec.clienteId && sec.listaId && (
+              <button
+                type="button"
+                className="pedido-seccion__zona-fix"
+                onClick={() => setConfirmarZona({
+                  clienteId:     sec.clienteId,
+                  clienteNombre: clientes.find(c => c.id === sec.clienteId)?.razon_social ?? '',
+                  listaId:       sec.listaId,
+                  listaNombre:   listas.find(l => l.id === sec.listaId)?.nombre ?? '',
+                })}
+              >
+                Corregir zona del cliente
+              </button>
+            )}
           </div>
 
           <div className="items-table-header">
@@ -201,8 +225,9 @@ export default function EditarPedido() {
             <span style={{ textAlign: 'center' }}>Pallet</span>
             <span style={{ textAlign: 'center' }}>Cajas</span>
             <span style={{ textAlign: 'center' }}>Piezas</span>
-            <span>Precio</span>
-            <span>Subtotal</span>
+            <span>Precio x Kg</span>
+            <span>Precio s/Iva</span>
+            <span>Kg est.</span>
             <span></span>
           </div>
 
@@ -220,8 +245,8 @@ export default function EditarPedido() {
             <Button variant="secondary" size="sm" onClick={() => addItem(sec.tempId)}>
               + Agregar producto
             </Button>
-            <span className="pedido-seccion__subtotal">
-              Subtotal: <strong>${fmt(calcSubtotalSec(sec))}</strong>
+            <span className="pedido-seccion__kg">
+              Kg estimados: <strong>{calcKgSec(sec).toLocaleString('es-AR')} kg</strong>
             </span>
           </div>
         </div>
@@ -232,8 +257,8 @@ export default function EditarPedido() {
       </Button>
 
       <div className="pedido-total">
-        <span className="pedido-total__label">Total del pedido</span>
-        <span className="pedido-total__amount">${fmt(total)}</span>
+        <span className="pedido-total__label">Total Kg estimado</span>
+        <span className="pedido-total__amount">{totalKg.toLocaleString('es-AR')} kg</span>
       </div>
 
       <div className="pedido-actions">
@@ -244,6 +269,18 @@ export default function EditarPedido() {
           ✓ Marcar como enviado
         </Button>
       </div>
+
+      {confirmarZona && (
+        <ConfirmDialog
+          title="Corregir zona del cliente"
+          message={`¿Actualizar la zona permanente de ${confirmarZona.clienteNombre} a "${confirmarZona.listaNombre}"? Esto afecta a todos sus pedidos, no solo a este.`}
+          onConfirm={handleCorregirZona}
+          onCancel={() => setConfirmarZona(null)}
+          loading={corrigiendoZona}
+          confirmLabel="Corregir zona"
+          confirmVariant="primary"
+        />
+      )}
     </AppLayout>
   )
 }

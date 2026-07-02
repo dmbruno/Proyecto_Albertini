@@ -1,6 +1,6 @@
 import Select from '../atoms/Select'
 import Input  from '../atoms/Input'
-import { calcTotalPiezas } from '../../lib/precios'
+import { calcTotalPiezas, calcSinIva, calcKgEstimado } from '../../lib/precios'
 
 function fmt(n) {
   return Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -13,7 +13,8 @@ export default function PedidoItemRow({ item, productos, onChange, onRemove }) {
   const piezasPerCaja  = Number(item.un_caja)   || 0
   const totalCajas  = (Number(item.pallet) * cajasPerPallet) + Number(item.cajas)
   const totalPiezas = calcTotalPiezas(item.pallet, item.cajas, item.un_pallet, item.un_caja)
-  const subtotal    = totalPiezas * Number(item.precio)
+  const sinIva      = calcSinIva(Number(item.precio) || 0)
+  const kgEstimado  = calcKgEstimado(totalPiezas)
 
   const handleProductoChange = (e) => {
     const prod = productos.find(p => p.id === e.target.value)
@@ -82,10 +83,10 @@ export default function PedidoItemRow({ item, productos, onChange, onRemove }) {
         )}
       </div>
 
-      {/* Precio + Subtotal */}
+      {/* Precio + Sin IVA + Kg estimado */}
       <div className="item-row__prices">
         <div>
-          <div className="item-row__qty-label">Precio</div>
+          <div className="item-row__qty-label">Precio x Kg</div>
           <div className="input-prefix-group">
             <span className="input-prefix-group__symbol">$</span>
             <Input
@@ -101,8 +102,12 @@ export default function PedidoItemRow({ item, productos, onChange, onRemove }) {
           </div>
         </div>
         <div>
-          <div className="item-row__qty-label">Subtotal</div>
-          <div className="item-row__subtotal-value">${fmt(subtotal)}</div>
+          <div className="item-row__qty-label">Precio s/Iva</div>
+          <div className="item-row__readonly-value">${fmt(sinIva)}</div>
+        </div>
+        <div>
+          <div className="item-row__qty-label">Kg est.</div>
+          <div className="item-row__readonly-value">{kgEstimado.toLocaleString('es-AR')} kg</div>
         </div>
       </div>
 

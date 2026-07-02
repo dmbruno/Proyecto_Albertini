@@ -6,7 +6,8 @@ import Button     from '../atoms/Button'
 import Spinner    from '../atoms/Spinner'
 import { usePedido }                  from '../../hooks/usePedido'
 import { exportarPedidoPDF }          from '../../lib/exportPdf'
-import { exportarPedidoFabricaPDF }   from '../../lib/exportPedidoFabricaPdf'
+import { calcSinIva, calcKgEstimado } from '../../lib/precios'
+import { agruparConZonas }            from '../../lib/zonas'
 import { useToast }                   from '../../context/ToastContext'
 
 function fmt(n) {
@@ -16,8 +17,9 @@ function fmtFecha(str) {
   if (!str) return ''
   return new Date(str + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
-function calcSubtotal(item) {
-  return item.piezas * item.precio
+const LABEL_ESTADO = {
+  borrador: 'Borrador',
+  enviado:  'Enviado',
 }
 
 function agruparPorCliente(items) {
@@ -57,17 +59,13 @@ export default function DetallePedido() {
   const handleMarcarEnviado = async () => {
     setMarking(true)
     const { error } = await marcarEnviado(id)
-    if (error) {
-      addToast(error.message, 'error')
-    } else {
-      setPedido(prev => ({ ...prev, estado: 'enviado' }))
-      addToast('Pedido marcado como enviado.')
-    }
     setMarking(false)
+    if (error) { addToast(error.message, 'error'); return }
+    addToast('Pedido marcado como enviado.')
+    setPedido(prev => ({ ...prev, estado: 'enviado' }))
   }
 
-  const [exporting,        setExporting]        = useState(false)
-  const [exportingFabrica, setExportingFabrica] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const handleExportPDF = async () => {
     if (!pedido) return
@@ -85,28 +83,11 @@ export default function DetallePedido() {
     }
   }
 
-  const handleExportFabricaPDF = async () => {
-    if (!pedido) return
-    setExportingFabrica(true)
-    try {
-      const secciones   = agruparPorCliente(items)
-      const totalPiezas = items.reduce((sum, i) => sum + (i.piezas || 0), 0)
-      const totalKg     = totalPiezas * 4
-      await exportarPedidoFabricaPDF({ pedido, secciones, totalPiezas, totalKg })
-      addToast('PDF de pedido descargado correctamente.', 'info')
-    } catch {
-      addToast('Error al generar el PDF.', 'error')
-    } finally {
-      setExportingFabrica(false)
-    }
-  }
-
   if (loading) return <AppLayout><Spinner size="lg" overlay /></AppLayout>
   if (error)   return <AppLayout><div className="error-banner">{error}</div></AppLayout>
   if (!pedido) return null
 
   const secciones   = agruparPorCliente(items)
-  const total       = items.reduce((sum, i) => sum + calcSubtotal(i), 0)
   const totalPiezas = items.reduce((sum, i) => sum + (i.piezas || 0), 0)
   const totalKg     = totalPiezas * 4
 
@@ -120,7 +101,7 @@ export default function DetallePedido() {
         <div>
           <h1 className="page-title">Pedido del {fmtFecha(pedido.fecha)}</h1>
           <p className="page-subtitle">
-            <Badge variant={pedido.estado}>{pedido.estado}</Badge>
+            <Badge variant={pedido.estado}>{LABEL_ESTADO[pedido.estado] ?? pedido.estado}</Badge>
             &nbsp;·&nbsp; {secciones.length} {secciones.length === 1 ? 'cliente' : 'clientes'}
             &nbsp;·&nbsp; {items.length} líneas
           </p>
@@ -133,15 +114,6 @@ export default function DetallePedido() {
               <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
             Descargar PDF
-          </Button>
-          <Button variant="secondary" size="sm" loading={exportingFabrica} onClick={handleExportFabricaPDF}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="16" y1="13" x2="8" y2="13"/>
-              <line x1="16" y1="17" x2="8" y2="17"/>
-            </svg>
-            Descargar pedido PDF
           </Button>
           {pedido.estado === 'borrador' && (
             <>
@@ -162,9 +134,19 @@ export default function DetallePedido() {
         </div>
       </div>
 
-      {/* Secciones por cliente */}
-      {secciones.map(({ cliente, items: secItems }, idx) => {
-        const subtotal = secItems.reduce((sum, i) => sum + calcSubtotal(i), 0)
+      {/* Secciones por cliente, agrupadas por zona */}
+      {agruparConZonas(secciones, sec => sec.cliente?.listas_precios?.nombre).map((entry, idx) => {
+        if (entry._esZona) {
+          return (
+            <div key={`zona-${idx}`} className="detalle-zona-separador">
+              {entry.nombre}
+            </div>
+          )
+        }
+
+        const { cliente, items: secItems } = entry
+        const kgSeccion = secItems.reduce((sum, i) => sum + calcKgEstimado(i.piezas), 0)
+        const zona = cliente?.listas_precios?.nombre ?? 'Sin zona asignada'
         return (
           <div key={idx} className="detalle-seccion">
             <div className="detalle-seccion__header">
@@ -177,46 +159,47 @@ export default function DetallePedido() {
                   <p className="detalle-seccion__comentario">{cliente.comentario}</p>
                 )}
               </div>
-              <span className="detalle-seccion__subtotal">${fmt(subtotal)}</span>
+              <span className="detalle-seccion__zona">{zona}</span>
             </div>
 
             <div className="detalle-items">
               <div className="detalle-items-scroll">
-                <table>
+                <table className="detalle-items__table">
                   <thead>
                     <tr>
                       <th>Producto</th>
-                      <th className="num col-hide-xs">Pallet</th>
-                      <th className="num col-hide-xs">Cajas</th>
+                      <th className="num">Pallet</th>
+                      <th className="num">Cajas</th>
                       <th className="num">Piezas</th>
-                      <th className="num col-hide-xs">Precio</th>
-                      <th className="num">Subtotal</th>
+                      <th className="num">Precio x Kg</th>
+                      <th className="num">Precio s/Iva</th>
+                      <th className="num">Kg est.</th>
                     </tr>
                   </thead>
                   <tbody>
                     {secItems.map(item => (
                       <tr key={item.id}>
-                        <td>{item.productos?.nombre ?? '—'}</td>
-                        <td className="num col-hide-xs">{item.pallet}</td>
-                        <td className="num col-hide-xs">{item.cajas}</td>
-                        <td className="num">{item.piezas}</td>
-                        <td className="num col-hide-xs">${fmt(item.precio)}</td>
-                        <td className="num">${fmt(calcSubtotal(item))}</td>
+                        <td data-label="Producto">{item.productos?.nombre ?? '—'}</td>
+                        <td className="num" data-label="Pallet">{item.pallet}</td>
+                        <td className="num" data-label="Cajas">{item.cajas}</td>
+                        <td className="num" data-label="Piezas">{item.piezas}</td>
+                        <td className="num" data-label="Precio x Kg">${fmt(item.precio)}</td>
+                        <td className="num" data-label="Precio s/Iva">${fmt(calcSinIva(item.precio))}</td>
+                        <td className="num" data-label="Kg est.">{calcKgEstimado(item.piezas).toLocaleString('es-AR')} kg</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             </div>
+
+            <div className="detalle-seccion__kg-footer">
+              <span className="detalle-seccion__kg-footer-label">Kg estimados</span>
+              <span className="detalle-seccion__kg-footer-value">{kgSeccion.toLocaleString('es-AR')} kg</span>
+            </div>
           </div>
         )
       })}
-
-      {/* Total general */}
-      <div className="detalle-total-general">
-        <span>TOTAL GENERAL</span>
-        <span>${fmt(total)}</span>
-      </div>
 
       {/* KG del pedido */}
       <div className="detalle-kg-box">

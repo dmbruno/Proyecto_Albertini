@@ -10,7 +10,7 @@ import { useProductos }        from '../../hooks/useProductos'
 import { usePedido }           from '../../hooks/usePedido'
 import { useAuth }             from '../../context/AuthContext'
 import { useToast }            from '../../context/ToastContext'
-import { calcPrecioFinal, calcTotalPiezas } from '../../lib/precios'
+import { calcPrecioFinal, calcTotalPiezas, calcKgEstimado } from '../../lib/precios'
 import { useListasPrecios } from '../../hooks/useListasPrecios'
 
 function newItem() {
@@ -20,13 +20,10 @@ function newSeccion() {
   return { tempId: crypto.randomUUID(), clienteId: '', listaId: '', items: [newItem()] }
 }
 
-function fmt(n) {
-  return Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-function calcSubtotalSec(sec) {
+function calcKgSec(sec) {
   return sec.items.reduce((sum, item) => {
     const piezas = calcTotalPiezas(item.pallet, item.cajas, item.un_pallet, item.un_caja)
-    return sum + piezas * Number(item.precio)
+    return sum + calcKgEstimado(piezas)
   }, 0)
 }
 
@@ -90,7 +87,7 @@ export default function NuevoPedido() {
     }
   }))
 
-  const total = secciones.reduce((sum, s) => sum + calcSubtotalSec(s), 0)
+  const totalKg = secciones.reduce((sum, s) => sum + calcKgSec(s), 0)
 
   const handleGuardar = async (estado) => {
     const sinCliente = secciones.some(s => !s.clienteId)
@@ -170,8 +167,9 @@ export default function NuevoPedido() {
             <span style={{ textAlign: 'center' }}>Cajas</span>
             <span style={{ textAlign: 'center' }}>Piezas</span>
 
-            <span>Precio</span>
-            <span>Subtotal</span>
+            <span>Precio x Kg</span>
+            <span>Precio s/Iva</span>
+            <span>Kg est.</span>
             <span></span>
           </div>
 
@@ -189,8 +187,8 @@ export default function NuevoPedido() {
             <Button variant="secondary" size="sm" onClick={() => addItem(sec.tempId)}>
               + Agregar producto
             </Button>
-            <span className="pedido-seccion__subtotal">
-              Subtotal: <strong>${fmt(calcSubtotalSec(sec))}</strong>
+            <span className="pedido-seccion__kg">
+              Kg estimados: <strong>{calcKgSec(sec).toLocaleString('es-AR')} kg</strong>
             </span>
           </div>
         </div>
@@ -201,8 +199,8 @@ export default function NuevoPedido() {
       </Button>
 
       <div className="pedido-total">
-        <span className="pedido-total__label">Total del pedido</span>
-        <span className="pedido-total__amount">${fmt(total)}</span>
+        <span className="pedido-total__label">Total Kg estimado</span>
+        <span className="pedido-total__amount">{totalKg.toLocaleString('es-AR')} kg</span>
       </div>
 
       <div className="pedido-actions">

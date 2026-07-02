@@ -2,6 +2,8 @@ import {
   Document, Page, View, Text,
   StyleSheet, pdf,
 } from '@react-pdf/renderer'
+import { calcSinIva, calcKgEstimado } from './precios'
+import { agruparConZonas } from './zonas'
 
 /* ── palette ── */
 const C = {
@@ -18,10 +20,11 @@ const C = {
 }
 
 const COL = {
-  producto:  { flex: 1 },
-  num:       { width: 44, textAlign: 'center' },
-  precio:    { width: 72, textAlign: 'right' },
-  subtotal:  { width: 80, textAlign: 'right' },
+  producto:    { flex: 1 },
+  num:         { width: 38, textAlign: 'center' },
+  precio:      { width: 76, textAlign: 'right' },
+  precioSinIva:{ width: 76, textAlign: 'right' },
+  kg:          { width: 60, textAlign: 'right' },
 }
 
 const s = StyleSheet.create({
@@ -207,8 +210,8 @@ const s = StyleSheet.create({
     fontFamily: 'Helvetica-Bold',
   },
 
-  /* subtotal por cliente */
-  secSubtotalRow: {
+  /* kg estimados por cliente */
+  secKgRow: {
     flexDirection: 'row',
     paddingHorizontal: 10,
     paddingVertical: 7,
@@ -218,7 +221,7 @@ const s = StyleSheet.create({
     justifyContent: 'flex-end',
     alignItems: 'center',
   },
-  secSubtotalLabel: {
+  secKgLabel: {
     fontFamily: 'Helvetica-Bold',
     fontSize: 8,
     color: C.muted,
@@ -226,36 +229,12 @@ const s = StyleSheet.create({
     letterSpacing: 0.4,
     marginRight: 12,
   },
-  secSubtotalValue: {
+  secKgValue: {
     fontFamily: 'Helvetica-Bold',
     fontSize: 9.5,
     color: C.primary,
     width: 80,
     textAlign: 'right',
-  },
-
-  /* total general */
-  totalGeneral: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: C.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    borderRadius: 4,
-    marginTop: 6,
-  },
-  totalLabel: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 11,
-    color: C.white,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-  },
-  totalValue: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 14,
-    color: C.white,
   },
 
   /* bloque KG */
@@ -307,34 +286,6 @@ const s = StyleSheet.create({
   },
 })
 
-/* ── orden por zona ── */
-const ZONA_ORDER = [
-  'Jujuy',
-  'Salta sin redespacho',
-  'Salta con redespacho',
-  'San Pedro',
-  'Güemes / Metán',
-]
-
-function agruparConZonas(secciones) {
-  const sorted = [...secciones].sort((a, b) => {
-    const zA = ZONA_ORDER.indexOf(a.cliente?.listas_precios?.nombre ?? '')
-    const zB = ZONA_ORDER.indexOf(b.cliente?.listas_precios?.nombre ?? '')
-    return (zA < 0 ? 999 : zA) - (zB < 0 ? 999 : zB)
-  })
-  const result = []
-  let zonaActual = null
-  for (const sec of sorted) {
-    const zona = sec.cliente?.listas_precios?.nombre ?? null
-    if (zona !== zonaActual) {
-      result.push({ _esZona: true, nombre: zona ?? 'Sin zona asignada' })
-      zonaActual = zona
-    }
-    result.push(sec)
-  }
-  return result
-}
-
 /* ── helpers ── */
 function fmt(n) {
   return '$' + Number(n).toLocaleString('es-AR', {
@@ -342,10 +293,6 @@ function fmt(n) {
     maximumFractionDigits: 2,
   })
 }
-function calcSubtotal(item) {
-  return item.piezas * item.precio
-}
-
 /* ── componente PDF ── */
 function PedidoPDF({ pedido, secciones, totalPiezas, totalKg }) {
   const fecha = pedido.fecha
@@ -353,9 +300,6 @@ function PedidoPDF({ pedido, secciones, totalPiezas, totalKg }) {
         day: '2-digit', month: '2-digit', year: 'numeric',
       })
     : ''
-  const totalGeneral = secciones
-    .flatMap(s => s.items)
-    .reduce((sum, i) => sum + calcSubtotal(i), 0)
 
   return (
     <Document>
@@ -368,13 +312,13 @@ function PedidoPDF({ pedido, secciones, totalPiezas, totalKg }) {
             <Text style={s.brandSub}>Gestión de pedidos</Text>
           </View>
           <View style={s.docMetaBlock}>
-            <Text style={s.docLabel}>Pedido a mayorista</Text>
+            <Text style={s.docLabel}>Pedido a fábrica</Text>
             <Text style={s.docFecha}>Fecha: {fecha}</Text>
           </View>
         </View>
 
         {/* secciones por cliente, ordenadas por zona */}
-        {agruparConZonas(secciones).map((entry, idx) => {
+        {agruparConZonas(secciones, sec => sec.cliente?.listas_precios?.nombre).map((entry, idx) => {
           if (entry._esZona) {
             return (
               <View key={`zona-${idx}`} style={s.zonaRow}>
@@ -384,7 +328,7 @@ function PedidoPDF({ pedido, secciones, totalPiezas, totalKg }) {
           }
 
           const { cliente, items } = entry
-          const subtotal = items.reduce((sum, i) => sum + calcSubtotal(i), 0)
+          const kgSeccion = items.reduce((sum, i) => sum + calcKgEstimado(i.piezas), 0)
           return (
             <View key={idx} style={s.seccion} wrap={false}>
 
@@ -424,8 +368,9 @@ function PedidoPDF({ pedido, secciones, totalPiezas, totalKg }) {
                 <Text style={[s.th, COL.num]}>Pallet</Text>
                 <Text style={[s.th, COL.num]}>Cajas</Text>
                 <Text style={[s.th, COL.num]}>Piezas</Text>
-                <Text style={[s.th, COL.precio]}>Precio</Text>
-                <Text style={[s.th, COL.subtotal]}>Subtotal</Text>
+                <Text style={[s.th, COL.precio]}>Precio x Kg</Text>
+                <Text style={[s.th, COL.precioSinIva]}>Precio s/Iva</Text>
+                <Text style={[s.th, COL.kg]}>Kg est.</Text>
               </View>
 
               {/* filas */}
@@ -439,14 +384,15 @@ function PedidoPDF({ pedido, secciones, totalPiezas, totalKg }) {
                   <Text style={[s.td, COL.num]}>{item.cajas  || '—'}</Text>
                   <Text style={[s.td, COL.num]}>{item.piezas || '—'}</Text>
                   <Text style={[s.td, COL.precio]}>{fmt(item.precio)}</Text>
-                  <Text style={[s.td, s.tdBold, COL.subtotal]}>{fmt(calcSubtotal(item))}</Text>
+                  <Text style={[s.td, COL.precioSinIva]}>{fmt(item.precio_sin_iva ?? calcSinIva(item.precio))}</Text>
+                  <Text style={[s.td, s.tdBold, COL.kg]}>{calcKgEstimado(item.piezas).toLocaleString('es-AR')} kg</Text>
                 </View>
               ))}
 
-              {/* subtotal del cliente */}
-              <View style={s.secSubtotalRow}>
-                <Text style={s.secSubtotalLabel}>Subtotal {cliente?.razon_social ?? ''}</Text>
-                <Text style={s.secSubtotalValue}>{fmt(subtotal)}</Text>
+              {/* kg estimados del cliente */}
+              <View style={s.secKgRow}>
+                <Text style={s.secKgLabel}>Kg estimados {cliente?.razon_social ?? ''}</Text>
+                <Text style={s.secKgValue}>{kgSeccion.toLocaleString('es-AR')} kg</Text>
               </View>
 
               {/* comentario: cierre visual del bloque */}
@@ -458,12 +404,6 @@ function PedidoPDF({ pedido, secciones, totalPiezas, totalKg }) {
             </View>
           )
         })}
-
-        {/* total general */}
-        <View style={s.totalGeneral}>
-          <Text style={s.totalLabel}>Total general</Text>
-          <Text style={s.totalValue}>{fmt(totalGeneral)}</Text>
-        </View>
 
         {/* KG */}
         {totalKg != null && (

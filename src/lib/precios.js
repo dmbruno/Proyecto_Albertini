@@ -17,3 +17,10 @@ export function calcTotalPiezas(pallet, cajas, unPallet, unCaja) {
   const totalCajas = (Number(pallet) * (Number(unPallet) || 0)) + Number(cajas)
   return totalCajas * (Number(unCaja) || 0)
 }
+
+// La fábrica factura según el peso real pesado en planta, no según este estimado.
+export const KG_POR_PIEZA = 4
+
+export function calcKgEstimado(piezas) {
+  return (Number(piezas) || 0) * KG_POR_PIEZA
+}
