@@ -1670,14 +1670,15 @@ ul, ol { list-style: none; }
   }
 }
 
-/* separador de zona entre grupos de clientes */
+/* separador de zona entre grupos de clientes: fondo sólido y fuente más
+   grande para poder distinguir de un vistazo cuántas zonas hay en el pedido. */
 .detalle-zona-separador {
-  background: var(--color-border-light);
-  color: var(--color-text);
-  padding: var(--space-2) var(--space-4);
-  margin: var(--space-4) 0 var(--space-2);
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  padding: var(--space-3) var(--space-4);
+  margin: var(--space-5) 0 var(--space-3);
   border-radius: var(--radius-md);
-  font-size: var(--text-xs);
+  font-size: var(--text-base);
   font-weight: var(--font-bold);
   text-transform: uppercase;
   letter-spacing: 0.05em;

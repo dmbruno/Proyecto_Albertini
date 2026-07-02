@@ -107,6 +107,7 @@ function ListaForm({ lista, onSave, onClose }) {
 
 function DescargarModal({ productos, lista, onClose }) {
   const [selected, setSelected] = useState(new Set())
+  const [fecha,    setFecha]    = useState(new Date().toISOString().slice(0, 10))
   const [loading,  setLoading]  = useState(false)
 
   const activos = productos.filter(p => p.activo)
@@ -137,7 +138,7 @@ function DescargarModal({ productos, lista, onClose }) {
       ...p,
       precioFinal: calcPrecioFinal(p.precio ?? 0, lista),
     }))
-    await exportarListaPDF({ lista, productos: conPrecio })
+    await exportarListaPDF({ lista, productos: conPrecio, fecha })
     setLoading(false)
     onClose()
   }
@@ -155,11 +156,26 @@ function DescargarModal({ productos, lista, onClose }) {
           </button>
         </div>
 
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-4)' }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
           Lista: <strong style={{ color: 'var(--color-text)' }}>{lista.nombre}</strong>
           <br />
           Seleccioná los productos a incluir o descargá la lista completa.
         </p>
+
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <FormField
+            label="Fecha de la lista"
+            htmlFor="fechaLista"
+            hint="Es la fecha que va a figurar en el PDF — no tiene que ser la de hoy si le estás pasando una lista anterior al cliente."
+          >
+            <Input
+              id="fechaLista"
+              type="date"
+              value={fecha}
+              onChange={e => setFecha(e.target.value)}
+            />
+          </FormField>
+        </div>
 
         {/* Seleccionar todos */}
         <label style={{

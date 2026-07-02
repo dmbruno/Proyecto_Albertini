@@ -29,16 +29,6 @@ const s = StyleSheet.create({
     backgroundColor: white,
   },
 
-  fecha: {
-    textAlign: 'center',
-    fontSize: 11,
-    fontFamily: 'Helvetica-Bold',
-    marginBottom: 14,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#cccccc',
-  },
-
   headerBlock: {
     marginBottom: 14,
   },
@@ -65,12 +55,20 @@ const s = StyleSheet.create({
   },
 
   clienteFila: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 16,
     marginTop: 2,
   },
   clienteTexto: {
     fontSize: 10,
     fontFamily: 'Helvetica-BoldOblique',
+    color: textoOsc,
+  },
+  fechaTexto: {
+    fontSize: 10,
+    fontFamily: 'Helvetica-Bold',
     color: textoOsc,
   },
 
@@ -148,8 +146,6 @@ function ListaPrecioPDF({ lista, productos, fecha }) {
     <Document>
       <Page size="A4" style={s.page}>
 
-        <Text style={s.fecha}>{fecha}</Text>
-
         <View style={s.headerBlock}>
           <Text style={s.empresa}>{EMPRESA}</Text>
           <Text style={s.pedidosLabel}>Pedidos:</Text>
@@ -159,6 +155,7 @@ function ListaPrecioPDF({ lista, productos, fecha }) {
 
         <View style={s.clienteFila}>
           <Text style={s.clienteTexto}>CLIENTE: {lista.nombre.toUpperCase()}</Text>
+          <Text style={s.fechaTexto}>Fecha: {fecha}</Text>
         </View>
 
         <View style={s.tableHeaderRow}>
@@ -185,10 +182,9 @@ function ListaPrecioPDF({ lista, productos, fecha }) {
   )
 }
 
-export async function exportarListaPDF({ lista, productos }) {
-  const fecha = new Date().toLocaleDateString('es-AR', {
-    day: '2-digit', month: '2-digit', year: '2-digit',
-  })
+export async function exportarListaPDF({ lista, productos, fecha: fechaISO }) {
+  const [y, m, d] = (fechaISO || new Date().toISOString().slice(0, 10)).split('-')
+  const fecha = `${d}/${m}/${y.slice(2)}`
   const blob = await pdf(
     <ListaPrecioPDF lista={lista} productos={productos} fecha={fecha} />
   ).toBlob()

@@ -91,19 +91,20 @@ const s = StyleSheet.create({
     letterSpacing: 0.8,
   },
 
-  /* separador de zona */
+  /* separador de zona: fondo sólido y letra más grande para identificar de
+     un vistazo cuántas zonas hay en el pedido */
   zonaRow: {
-    backgroundColor: '#dbeafe',
+    backgroundColor: C.primary,
     paddingHorizontal: 12,
-    paddingVertical: 5,
-    marginTop: 12,
-    marginBottom: 4,
-    borderRadius: 2,
+    paddingVertical: 7,
+    marginTop: 14,
+    marginBottom: 6,
+    borderRadius: 3,
   },
   zonaTexto: {
     fontFamily: 'Helvetica-Bold',
-    fontSize: 8.5,
-    color: C.primary,
+    fontSize: 11,
+    color: C.white,
     textTransform: 'uppercase',
     letterSpacing: 1.2,
   },
@@ -117,24 +118,27 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
 
-  /* cabecera azul del cliente */
+  /* cabecera del cliente: fondo claro, igual que la card en la vista de la
+     app, para que no se confunda con la barra de zona (esa sí sólida). */
   clienteBar: {
-    backgroundColor: C.primary,
+    backgroundColor: C.stripe,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
   },
   clienteNombre: {
     fontFamily: 'Helvetica-Bold',
     fontSize: 10,
-    color: C.white,
+    color: C.text,
   },
   clienteTipo: {
     fontFamily: 'Helvetica-Bold',
     fontSize: 7.5,
-    color: '#93c5fd',
+    color: C.muted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },

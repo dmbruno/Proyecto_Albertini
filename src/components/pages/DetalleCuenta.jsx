@@ -10,6 +10,7 @@ import { useCuentaCorriente, eliminarMovimientos, verFactura } from '../../hooks
 import { supabase }             from '../../lib/supabaseClient'
 import { useToast }             from '../../context/ToastContext'
 import { TIPO_LABEL, efectoDe, badgeVariantEfecto, estadoVencimiento, FACTURA_CATEGORIA_LABEL } from '../../lib/movimientos'
+import { exportarMovimientosClientePDF } from '../../lib/exportMovimientosClientePdf'
 
 const LABEL_CONDICION = {
   'RESPONSABLE INSCRIPTO': 'RI',
@@ -46,6 +47,19 @@ function hoy() {
   return new Date().toISOString().slice(0, 10)
 }
 
+function restarDias(n) {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  return d.toISOString().slice(0, 10)
+}
+
+const PRESETS_FECHA = [
+  { id: 'todo',   label: 'Todo',          desde: null },
+  { id: '30d',    label: '30 días',       desde: () => restarDias(30) },
+  { id: '90d',    label: '90 días',       desde: () => restarDias(90) },
+  { id: 'custom', label: 'Personalizado', desde: null },
+]
+
 export default function DetalleCuenta() {
   const { clienteId } = useParams()
   const navigate      = useNavigate()
@@ -60,6 +74,10 @@ export default function DetalleCuenta() {
   const [cliente,        setCliente]        = useState(null)
   const [loadingCli,     setLoadingCli]     = useState(true)
   const [filtro,         setFiltro]         = useState('todos')
+  const [presetFecha,    setPresetFecha]    = useState('todo')
+  const [desde,          setDesde]          = useState('')
+  const [hasta,          setHasta]          = useState(hoy())
+  const [exportingPdf,   setExportingPdf]   = useState(false)
   const [formOpen,       setFormOpen]       = useState(false)
   const [formInicial,    setFormInicial]    = useState(null)
   const [formPrefill,    setFormPrefill]    = useState(null)
@@ -99,9 +117,37 @@ export default function DetalleCuenta() {
   const enDeuda = saldo > 0
   const aFavor  = saldo < 0
 
+  const rangoActivo = presetFecha !== 'todo'
+
   const filtered = movimientos.filter(m =>
-    filtro === 'todos' || efectoDe(m) === filtro
+    (filtro === 'todos' || efectoDe(m) === filtro) &&
+    (!rangoActivo || (!desde || m.fecha >= desde) && (!hasta || m.fecha <= hasta))
   )
+
+  const handlePresetFecha = (p) => {
+    setPresetFecha(p.id)
+    if (p.id === 'todo') {
+      setDesde('')
+      setHasta(hoy())
+    } else if (p.id !== 'custom') {
+      setDesde(p.desde())
+      setHasta(hoy())
+    }
+  }
+
+  const handleDescargarPDF = async () => {
+    setExportingPdf(true)
+    try {
+      await exportarMovimientosClientePDF({
+        cliente,
+        movimientos,
+        desde: rangoActivo ? (desde || null) : null,
+        hasta: rangoActivo ? (hasta || null) : null,
+      })
+    } finally {
+      setExportingPdf(false)
+    }
+  }
 
   const tieneCheques = movimientos.some(m =>
     m.tipo === 'PAGO' && (m.medio_pago === 'CHEQUE' || m.medio_pago === 'ECHEQ')
@@ -274,10 +320,60 @@ export default function DetalleCuenta() {
             🧾 Ver cheques
           </Button>
         )}
+        <Button variant="secondary" loading={exportingPdf} onClick={handleDescargarPDF}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Descargar PDF
+        </Button>
         <Button onClick={() => abrirForm()}>+ Nuevo movimiento</Button>
       </div>
 
-      {/* Filtros */}
+      {/* Filtro de fechas */}
+      <div className="stats-filters">
+        <div className="filter-tabs" style={{ marginBottom: 0 }}>
+          {PRESETS_FECHA.map(p => (
+            <button
+              key={p.id}
+              type="button"
+              className={`filter-tab${presetFecha === p.id ? ' filter-tab--active' : ''}`}
+              onClick={() => handlePresetFecha(p)}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        {presetFecha === 'custom' && (
+          <div className="stats-date-range">
+            <div className="stats-date-range__field">
+              <label className="stats-date-range__label">Desde</label>
+              <input
+                type="date"
+                className="input"
+                value={desde}
+                max={hasta}
+                onChange={e => setDesde(e.target.value)}
+              />
+            </div>
+            <div className="stats-date-range__field">
+              <label className="stats-date-range__label">Hasta</label>
+              <input
+                type="date"
+                className="input"
+                value={hasta}
+                min={desde}
+                max={hoy()}
+                onChange={e => setHasta(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Filtros de debe/haber */}
       <div className="filter-tabs">
         {FILTROS.map(f => (
           <button
