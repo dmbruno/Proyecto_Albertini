@@ -138,7 +138,7 @@ ul, ol { list-style: none; }
 
   /* --- Layout --- */
   --max-width:       1280px;
-  --header-height:   56px;
+  --header-height:   64px;
   --sidebar-width:   240px;
   --bottom-nav-h:    60px;
 }
@@ -648,15 +648,9 @@ ul, ol { list-style: none; }
   letter-spacing: -0.02em;
 }
 
-.header__brand-icon {
-  width: 32px;
-  height: 32px;
-  background: var(--color-accent);
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--text-lg);
+.header__brand-logo {
+  height: 54px;
+  width: 54px;
   flex-shrink: 0;
 }
 
@@ -847,31 +841,14 @@ ul, ol { list-style: none; }
 
 .auth-logo {
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
+  justify-content: center;
   margin-bottom: var(--space-8);
 }
 
-.auth-logo__icon {
-  width: 48px;
-  height: 48px;
-  background: var(--color-primary);
-  border-radius: var(--radius-lg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.auth-logo__name {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-bold);
-  color: var(--color-text);
-}
-
-.auth-logo__sub {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-  margin-top: 2px;
+.auth-logo__img {
+  width: 100%;
+  max-width: 220px;
+  height: auto;
 }
 
 /* ============================================================

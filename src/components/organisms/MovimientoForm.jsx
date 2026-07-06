@@ -75,7 +75,7 @@ export default function MovimientoForm({ onSave, onClose, clienteId, inicial = n
     setForm(prev => ({
       ...prev,
       tipo,
-      fechaVencimiento: (tipo === 'FAC' && !vencimientoTocado)
+      fechaVencimiento: (['FAC', 'REMITO'].includes(tipo) && !vencimientoTocado)
         ? sumarDias(prev.fecha, 15)
         : prev.fechaVencimiento,
     }))
@@ -85,7 +85,7 @@ export default function MovimientoForm({ onSave, onClose, clienteId, inicial = n
     setForm(prev => ({
       ...prev,
       fecha,
-      fechaVencimiento: (prev.tipo === 'FAC' && !vencimientoTocado)
+      fechaVencimiento: (['FAC', 'REMITO'].includes(prev.tipo) && !vencimientoTocado)
         ? sumarDias(fecha, 15)
         : prev.fechaVencimiento,
     }))

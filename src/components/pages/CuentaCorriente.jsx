@@ -12,9 +12,10 @@ import { useToast }            from '../../context/ToastContext'
 import { exportarCuentasPDF }  from '../../lib/exportCuentasPdf'
 
 const FILTROS = [
-  { id: 'todos',   label: 'Todos'     },
-  { id: 'deuda',   label: 'Con deuda' },
-  { id: 'al_dia',  label: 'Al día'    },
+  { id: 'todos',    label: 'Todos'           },
+  { id: 'deuda',    label: 'Con deuda'       },
+  { id: 'al_dia',   label: 'Al día'          },
+  { id: 'vencidas', label: 'Fact por vencer' },
 ]
 
 const LABEL_CONDICION = {
@@ -144,10 +145,38 @@ export default function CuentaCorriente() {
         </div>
       </div>
 
-      {facturasAlerta.length > 0 && (
-        <div className="stats-card" style={{ marginBottom: 'var(--space-4)' }}>
-          <p className="stats-card__title">⚠ Facturas por vencer</p>
-          <p className="stats-card__sub">Vencidas o que vencen dentro de los próximos 7 días</p>
+      <div className="filter-tabs">
+        {FILTROS.map(f => (
+          <button
+            key={f.id}
+            type="button"
+            className={`filter-tab${filtro === f.id ? ' filter-tab--active' : ''}`}
+            onClick={() => setFiltro(f.id)}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {filtro !== 'vencidas' && (
+        <SearchBar
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Buscar cliente…"
+          style={{ marginBottom: 'var(--space-4)' }}
+        />
+      )}
+
+      {error && <div className="error-banner">{error}</div>}
+
+      {filtro === 'vencidas' ? (
+        facturasAlerta.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state__icon">📒</div>
+            <p className="empty-state__title">Sin resultados</p>
+            <p className="empty-state__desc">No hay facturas vencidas o por vencer.</p>
+          </div>
+        ) : (
           <div className="list">
             {facturasAlerta.map(f => {
               const vencida = diasHasta(f.fecha_vencimiento) < 0
@@ -196,32 +225,8 @@ export default function CuentaCorriente() {
               )
             })}
           </div>
-        </div>
-      )}
-
-      <div className="filter-tabs">
-        {FILTROS.map(f => (
-          <button
-            key={f.id}
-            type="button"
-            className={`filter-tab${filtro === f.id ? ' filter-tab--active' : ''}`}
-            onClick={() => setFiltro(f.id)}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      <SearchBar
-        value={query}
-        onChange={e => setQuery(e.target.value)}
-        placeholder="Buscar cliente…"
-        style={{ marginBottom: 'var(--space-4)' }}
-      />
-
-      {error && <div className="error-banner">{error}</div>}
-
-      {loading ? (
+        )
+      ) : loading ? (
         <Spinner size="lg" overlay />
       ) : filtered.length === 0 ? (
         <div className="empty-state">

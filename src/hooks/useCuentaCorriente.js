@@ -20,8 +20,10 @@ export function useSaldos() {
   return { saldos, loading, error, fetchSaldos }
 }
 
-// Facturas (tipo FAC) sin marcar como pagadas, de todos los clientes, ordenadas
-// por fecha de vencimiento — alimenta el panel "Facturas por vencer".
+// Facturas y remitos (tipo FAC o REMITO) sin marcar como pagados, de todos los
+// clientes, ordenados por fecha de vencimiento — alimenta el panel "Facturas por vencer".
+// El remito se incluye porque a los clientes que venden "sin factura" se les
+// carga como su comprobante de venta real (ver efectoDe en lib/movimientos.js).
 export function useFacturasPorVencer() {
   const [facturas, setFacturas] = useState([])
   const [loading,  setLoading]  = useState(false)
@@ -32,7 +34,7 @@ export function useFacturasPorVencer() {
     const { data, error } = await supabase
       .from('movimientos_cuenta')
       .select('*, clientes(razon_social)')
-      .eq('tipo', 'FAC')
+      .in('tipo', ['FAC', 'REMITO'])
       .eq('pagada', false)
       .order('fecha_vencimiento', { ascending: true })
     setFacturas(data ?? [])

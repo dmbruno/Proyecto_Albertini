@@ -22,11 +22,13 @@ export const TIPO_LABEL = {
 
 // Mismo criterio que la vista saldos_clientes en Supabase: qué tipos suman
 // deuda (debe), cuáles la bajan (haber), y cuáles no afectan el saldo.
+// REMITO suma deuda igual que FAC: a los clientes que venden "sin factura"
+// se les carga un remito como comprobante de venta real.
 export function efectoDe(mov) {
-  if (['FAC', 'ND', 'INTERES', 'CH-RECH'].includes(mov.tipo)) return 'debe'
+  if (['FAC', 'REMITO', 'ND', 'INTERES', 'CH-RECH'].includes(mov.tipo)) return 'debe'
   if (['NC', 'DEVOLUCION', 'PAGO'].includes(mov.tipo)) return 'haber'
   if (mov.tipo === 'AJUSTE') return mov.ajuste_efecto === 'HABER' ? 'haber' : 'debe'
-  return 'neutral' // REMITO
+  return 'neutral'
 }
 
 export function badgeVariantEfecto(efecto) {
@@ -34,9 +36,9 @@ export function badgeVariantEfecto(efecto) {
 }
 
 // null si la factura no está en alerta; 'vencida' o 'por_vencer' si corresponde.
-// Solo aplica a facturas (tipo FAC) sin marcar como pagadas.
+// Aplica a facturas y remitos (tipo FAC o REMITO) sin marcar como pagados.
 export function estadoVencimiento(mov) {
-  if (mov.tipo !== 'FAC' || mov.pagada || !mov.fecha_vencimiento) return null
+  if (!['FAC', 'REMITO'].includes(mov.tipo) || mov.pagada || !mov.fecha_vencimiento) return null
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
   const venc = new Date(mov.fecha_vencimiento + 'T00:00:00')
   const diffDias = Math.round((venc - hoy) / 86400000)
