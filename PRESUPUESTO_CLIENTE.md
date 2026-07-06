@@ -43,9 +43,12 @@ de lo que vale.
 
 ## Cómo plantearlo (sugerencia de mensaje)
 
-La idea es no sonar defensivo ni como si estuvieras "cobrando de más a un
-amigo" — al contrario, mostrar que el trabajo se multiplicó y que estás
-siendo justo con el precio, no oportunista.
+La idea es mostrar primero el número de mercado como ancla ("mirá cuánto
+sale esto realmente"), y después contrastarlo con lo que le vas a cobrar a
+él — así el precio de amigo se ve como lo que es: un privilegio real, no un
+número arbitrario. No suena defensivo ni oportunista, al revés: mostrás que
+el trabajo se multiplicó y que vos estás poniendo plata de tu bolsillo en
+esa diferencia.
 
 > "Che, quería hablarte de la app antes de seguir. Cuando arrancamos era
 > básicamente reemplazar las planillas — pero terminamos armando bastante más:
@@ -53,12 +56,16 @@ siendo justo con el precio, no oportunista.
 > facturas con foto, todo lo de pedidos y estadísticas. Ya es un sistema
 > bastante grande, no la app 'sencilla' que hablamos al principio.
 >
-> Te tiro un número para que sepas en qué anda esto: son unas 80 horas de
-> laburo real, y a 20 dólares la hora estamos hablando de **USD 1.600**. Sé
-> que la tarifa la conversamos hace rato, así que si te suena bien lo
-> arrancamos a cobrar, y si querés lo hablamos y vemos cómo lo hacemos —
-> en cuotas, por módulo, como te sea más cómodo. No quiero que sea un
-> golpe sorpresa."
+> Te tiro los números para que veas en qué anda esto. Cotizado como se
+> cotizaría afuera — un freelancer armando esto de cero, a precio de mercado —
+> esto sale entre **USD 3.000 y 3.500**. A vos obviamente no te voy a cobrar
+> eso.
+>
+> Te lo voy a cobrar a **USD 1.600** (unas 80 horas reales de laburo a USD
+> 20 la hora) — menos de la mitad. Sé que la tarifa la conversamos hace
+> rato, así que si te suena bien lo arrancamos a cobrar, y si querés lo
+> hablamos y vemos cómo lo hacemos — en cuotas, por módulo, como te sea más
+> cómodo. No quiero que sea un golpe sorpresa."
 
 ## Opciones para que aterrice mejor (por ser amigo)
 
