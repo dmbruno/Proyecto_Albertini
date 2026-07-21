@@ -11,6 +11,7 @@ import MovimientoForm  from '../organisms/MovimientoForm'
 import { useMovimientosGlobales, registrarMovimientoStandalone, marcarFacturaPagada, verFactura } from '../../hooks/useCuentaCorriente'
 import { useToast }     from '../../context/ToastContext'
 import { TIPO_LABEL, efectoDe, badgeVariantEfecto, estadoVencimiento, FACTURA_CATEGORIA_LABEL } from '../../lib/movimientos'
+import { exportarMovimientosPDF } from '../../lib/exportMovimientosPdf'
 
 function hoy() {
   return new Date().toISOString().slice(0, 10)
@@ -71,6 +72,7 @@ export default function Movimientos() {
   const [formPrefill,    setFormPrefill]    = useState(null)
   const [confirmarApagarAlerta, setConfirmarApagarAlerta] = useState(null)
   const [apagandoAlerta,        setApagandoAlerta]        = useState(false)
+  const [exporting,             setExporting]             = useState(false)
 
   useEffect(() => {
     fetchMovimientosGlobales({ desde, hasta })
@@ -136,6 +138,18 @@ export default function Movimientos() {
   const totalHaber = filtered.reduce((s, m) => s + (efectoDe(m) === 'haber' ? Number(m.monto) : 0), 0)
   const balance    = totalDebe - totalHaber
 
+  const handleExportPDF = async () => {
+    setExporting(true)
+    try {
+      await exportarMovimientosPDF({ movimientos: filtered, desde, hasta })
+      addToast('PDF descargado correctamente.', 'info')
+    } catch {
+      addToast('Error al generar el PDF.', 'error')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <AppLayout>
       <button className="back-btn" type="button" onClick={() => navigate(-1)}>
@@ -146,6 +160,16 @@ export default function Movimientos() {
         <div>
           <h1 className="page-title">Movimientos</h1>
           <p className="page-subtitle">Libro de cuenta corriente de todos los clientes</p>
+        </div>
+        <div className="cuentas-acciones">
+          <Button variant="secondary" size="sm" loading={exporting} onClick={handleExportPDF}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Descargar PDF
+          </Button>
         </div>
       </div>
 

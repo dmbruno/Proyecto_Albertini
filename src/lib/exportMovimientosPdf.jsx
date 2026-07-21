@@ -15,15 +15,15 @@ const C = {
 }
 
 const COL = {
-  fecha:     { width: 55 },
-  cbte:      { width: 55 },
-  vto:       { width: 60 },
-  numero:    { width: 70 },
+  fecha:     { width: 52 },
+  tipo:      { width: 62 },
+  cliente:   { flex: 1.3 },
+  numero:    { width: 65 },
   producto:  { flex: 1 },
-  formaPago: { width: 95 },
-  debe:      { width: 80,  textAlign: 'right' },
-  haber:     { width: 80,  textAlign: 'right' },
-  saldo:     { width: 95,  textAlign: 'right' },
+  formaPago: { width: 85 },
+  vto:       { width: 55 },
+  debe:      { width: 72, textAlign: 'right' },
+  haber:     { width: 72, textAlign: 'right' },
 }
 
 const s = StyleSheet.create({
@@ -75,16 +75,36 @@ const s = StyleSheet.create({
     marginTop: 3,
   },
 
-  clienteBlock: { marginBottom: 12 },
-  clienteNombre: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 13,
-    color: C.text,
-  },
+  rangoBlock: { marginBottom: 12 },
   rango: {
     fontSize: 8.5,
     color: C.muted,
-    marginTop: 2,
+  },
+
+  kpisRow: {
+    flexDirection: 'row',
+    marginBottom: 14,
+  },
+  kpiBox: {
+    flex: 1,
+    backgroundColor: C.primaryLight,
+    borderRadius: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 8,
+  },
+  kpiBoxLast: { marginRight: 0 },
+  kpiLabel: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 7,
+    color: C.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 3,
+  },
+  kpiValue: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 12,
   },
 
   tableHead: {
@@ -109,7 +129,6 @@ const s = StyleSheet.create({
     borderBottomColor: C.border,
   },
   tableRowAlt: { backgroundColor: C.stripe },
-  tableRowAnterior: { backgroundColor: C.primaryLight },
   td: { fontSize: 8, color: C.text },
   tdMuted: { fontSize: 8, color: C.subtle },
   tdBold: { fontFamily: 'Helvetica-Bold' },
@@ -161,23 +180,7 @@ function fmtFecha(str) {
   return `${d}/${m}/${y}`
 }
 
-function signedMonto(mov) {
-  const efecto = efectoDe(mov)
-  if (efecto === 'debe')  return Number(mov.monto)
-  if (efecto === 'haber') return -Number(mov.monto)
-  return 0
-}
-
-function ordenAsc(movs) {
-  return [...movs].sort((a, b) => {
-    if (a.fecha !== b.fecha) return a.fecha < b.fecha ? -1 : 1
-    return (a.created_at || '') < (b.created_at || '') ? -1 : 1
-  })
-}
-
-function MovimientosClientePDF({ cliente, filas, saldoAnterior, mostrarSaldoAnterior, desde, hasta, fecha }) {
-  const saldoFinal = filas.length > 0 ? filas[filas.length - 1].saldo : saldoAnterior
-
+function MovimientosPDF({ movimientos, desde, hasta, fecha, totalDebe, totalHaber, balance }) {
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={s.page}>
@@ -188,67 +191,65 @@ function MovimientosClientePDF({ cliente, filas, saldoAnterior, mostrarSaldoAnte
             <Text style={s.brandSub}>Gestión de pedidos</Text>
           </View>
           <View style={s.docMetaBlock}>
-            <Text style={s.docLabel}>Estado de cuenta</Text>
+            <Text style={s.docLabel}>Movimientos</Text>
             <Text style={s.docFecha}>Generado: {fecha}</Text>
           </View>
         </View>
 
-        <View style={s.clienteBlock}>
-          <Text style={s.clienteNombre}>{cliente.razon_social}</Text>
+        <View style={s.rangoBlock}>
           <Text style={s.rango}>
-            {desde || hasta
-              ? `Movimientos desde ${desde ? fmtFecha(desde) : 'el inicio'} hasta ${hasta ? fmtFecha(hasta) : 'hoy'}`
-              : 'Todos los movimientos'}
+            Del {fmtFecha(desde)} al {fmtFecha(hasta)} · {movimientos.length} movimiento{movimientos.length === 1 ? '' : 's'}
           </Text>
+        </View>
+
+        <View style={s.kpisRow}>
+          <View style={s.kpiBox}>
+            <Text style={s.kpiLabel}>Total Debe</Text>
+            <Text style={[s.kpiValue, { color: C.error }]}>{fmt(totalDebe)}</Text>
+          </View>
+          <View style={s.kpiBox}>
+            <Text style={s.kpiLabel}>Total Haber</Text>
+            <Text style={[s.kpiValue, { color: C.success }]}>{fmt(totalHaber)}</Text>
+          </View>
+          <View style={[s.kpiBox, s.kpiBoxLast]}>
+            <Text style={s.kpiLabel}>Balance del período</Text>
+            <Text style={[s.kpiValue, { color: balance > 0 ? C.error : C.success }]}>{fmt(Math.abs(balance))}</Text>
+          </View>
         </View>
 
         <View style={s.tableHead} fixed>
           <Text style={[s.th, COL.fecha]}>Fecha</Text>
-          <Text style={[s.th, COL.cbte]}>Cbte</Text>
-          <Text style={[s.th, COL.vto]}>Vto. Fact</Text>
+          <Text style={[s.th, COL.tipo]}>Tipo</Text>
+          <Text style={[s.th, COL.cliente]}>Cliente</Text>
           <Text style={[s.th, COL.numero]}>Número</Text>
           <Text style={[s.th, COL.producto]}>Detalle</Text>
           <Text style={[s.th, COL.formaPago]}>Forma de pago</Text>
+          <Text style={[s.th, COL.vto]}>Vto</Text>
           <Text style={[s.th, COL.debe]}>Debe</Text>
           <Text style={[s.th, COL.haber]}>Haber</Text>
-          <Text style={[s.th, COL.saldo]}>Saldo</Text>
         </View>
 
-        {mostrarSaldoAnterior && (
-          <View style={[s.tableRow, s.tableRowAnterior]} wrap={false}>
-            <Text style={[s.td, s.tdBold, COL.fecha]}></Text>
-            <Text style={[s.td, s.tdBold, COL.cbte]}></Text>
-            <Text style={[s.td, COL.vto]}></Text>
-            <Text style={[s.td, COL.numero]}></Text>
-            <Text style={[s.td, s.tdBold, COL.producto]}>Saldo anterior</Text>
-            <Text style={[s.td, COL.formaPago]}></Text>
-            <Text style={[s.td, COL.debe]}></Text>
-            <Text style={[s.td, COL.haber]}></Text>
-            <Text style={[s.td, s.tdBold, COL.saldo]}>{fmt(saldoAnterior)}</Text>
-          </View>
-        )}
-
-        {filas.map(({ mov, saldo }, i) => {
+        {movimientos.map((mov, i) => {
           const efecto  = efectoDe(mov)
           const detalle = detalleDe(mov)
           return (
             <View key={mov.id} style={[s.tableRow, i % 2 === 1 && s.tableRowAlt]} wrap={false}>
               <Text style={[s.td, COL.fecha]}>{fmtFecha(mov.fecha)}</Text>
-              <Text style={[s.td, COL.cbte]}>{TIPO_LABEL[mov.tipo] ?? mov.tipo}</Text>
-              <Text style={[s.tdMuted, COL.vto]}>{fmtFecha(mov.fecha_vencimiento)}</Text>
+              <Text style={[s.td, COL.tipo]}>{TIPO_LABEL[mov.tipo] ?? mov.tipo}</Text>
+              <Text style={[s.td, s.tdBold, COL.cliente]}>{mov.clientes?.razon_social ?? ''}</Text>
               <Text style={[s.td, COL.numero]}>{mov.numero_comprobante || ''}</Text>
               <Text style={[s.td, COL.producto]}>{detalle}</Text>
               <Text style={[s.td, COL.formaPago]}>{formaPagoDe(mov)}</Text>
+              <Text style={[s.tdMuted, COL.vto]}>{fmtFecha(mov.fecha_vencimiento)}</Text>
               <Text style={[s.td, COL.debe]}>{efecto === 'debe' ? fmt(mov.monto) : ''}</Text>
               <Text style={[s.td, COL.haber]}>{efecto === 'haber' ? fmt(mov.monto) : ''}</Text>
-              <Text style={[s.td, s.tdBold, COL.saldo]}>{fmt(saldo)}</Text>
             </View>
           )
         })}
 
         <View style={s.totalGeneral}>
-          <Text style={s.totalLabel}>Saldo final</Text>
-          <Text style={s.totalValue}>{fmt(saldoFinal)}</Text>
+          <Text style={s.totalLabel}>Balance del período</Text>
+          <Text style={s.totalValue}>{fmt(Math.abs(balance))}</Text>
         </View>
 
         <View style={s.pageFooter} fixed>
@@ -263,39 +264,31 @@ function MovimientosClientePDF({ cliente, filas, saldoAnterior, mostrarSaldoAnte
   )
 }
 
-export async function exportarMovimientosClientePDF({ cliente, movimientos, desde, hasta }) {
-  const todosAsc = ordenAsc(movimientos)
-  const previos   = desde ? todosAsc.filter(m => m.fecha < desde) : []
-  const enRango   = todosAsc.filter(m => (!desde || m.fecha >= desde) && (!hasta || m.fecha <= hasta))
-
-  const saldoAnterior = previos.reduce((acc, m) => acc + signedMonto(m), 0)
-
-  let saldoCorrida = saldoAnterior
-  const filas = enRango.map(mov => {
-    saldoCorrida += signedMonto(mov)
-    return { mov, saldo: saldoCorrida }
-  })
+export async function exportarMovimientosPDF({ movimientos, desde, hasta }) {
+  const totalDebe  = movimientos.reduce((acc, m) => acc + (efectoDe(m) === 'debe'  ? Number(m.monto) : 0), 0)
+  const totalHaber = movimientos.reduce((acc, m) => acc + (efectoDe(m) === 'haber' ? Number(m.monto) : 0), 0)
+  const balance     = totalDebe - totalHaber
 
   const fecha = new Date().toLocaleDateString('es-AR', {
     day: '2-digit', month: '2-digit', year: 'numeric',
   })
 
   const blob = await pdf(
-    <MovimientosClientePDF
-      cliente={cliente}
-      filas={filas}
-      saldoAnterior={saldoAnterior}
-      mostrarSaldoAnterior={!!desde && previos.length > 0}
+    <MovimientosPDF
+      movimientos={movimientos}
       desde={desde}
       hasta={hasta}
       fecha={fecha}
+      totalDebe={totalDebe}
+      totalHaber={totalHaber}
+      balance={balance}
     />
   ).toBlob()
 
   const url  = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href     = url
-  link.download = `movimientos_${cliente.razon_social.toLowerCase().replace(/[\s/,]+/g, '_')}.pdf`
+  link.download = `movimientos_${desde}_${hasta}.pdf`
   link.click()
   URL.revokeObjectURL(url)
 }

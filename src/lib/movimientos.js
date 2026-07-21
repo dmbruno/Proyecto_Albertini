@@ -20,6 +20,29 @@ export const TIPO_LABEL = {
   PAGO:       'Pago',
 }
 
+export const MEDIO_PAGO_LABEL = {
+  EFECTIVO:      'Efectivo',
+  TRANSFERENCIA: 'Transferencia',
+  CHEQUE:        'Cheque',
+  ECHEQ:         'ECheq',
+  DEPOSITO:      'Depósito',
+  COMPRA:        'Compra',
+  CANCELADO:     'Cancelado',
+}
+
+// Producto o categoría del comprobante (vacío para pagos).
+export function detalleDe(mov) {
+  return FACTURA_CATEGORIA_LABEL[mov.factura_categoria] || mov.productos?.nombre || ''
+}
+
+// Forma de pago (+ datos del cheque si corresponde). Vacío si no es un pago.
+export function formaPagoDe(mov) {
+  if (mov.tipo !== 'PAGO' || !mov.medio_pago) return ''
+  const medio = MEDIO_PAGO_LABEL[mov.medio_pago] ?? mov.medio_pago
+  const esCheque = mov.medio_pago === 'CHEQUE' || mov.medio_pago === 'ECHEQ'
+  return esCheque ? `${medio} · Nº ${mov.cheque_numero || '—'} · ${mov.cheque_banco || '—'}` : medio
+}
+
 // Mismo criterio que la vista saldos_clientes en Supabase: qué tipos suman
 // deuda (debe), cuáles la bajan (haber), y cuáles no afectan el saldo.
 // REMITO suma deuda igual que FAC: a los clientes que venden "sin factura"
